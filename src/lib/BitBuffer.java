@@ -1,5 +1,7 @@
 package lib;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -92,21 +94,20 @@ public class BitBuffer  {
 	
     public void write(OutputStream out) throws IOException {
         
+        BufferedOutputStream _out = new BufferedOutputStream(out);
+        
         if (bitIdx == 0) throw new IllegalStateException("There is no data in buffer to write.");
         
-        out.write(bitIdx >> 24); 
-        out.write(bitIdx >> 16);
-        out.write(bitIdx >> 8);
-        out.write(bitIdx);
-        
-        byte[] b = new byte[bitIdx % 64 == 0 ? 8 * longIdx : 8 * longIdx + (((bitIdx - 1) % 64) / 8) + 1];
-        
+        _out.write(bitIdx >> 24); 
+        _out.write(bitIdx >> 16);
+        _out.write(bitIdx >> 8);
+        _out.write(bitIdx);
+
         for (int lidx = 0; lidx < longIdx; lidx++) {
             long l = buffer[lidx];
-            int offset = lidx << 3;
             int from = 56, to = 63;
             for (int bidx = 0; bidx < 8; bidx++) {
-                b[offset + bidx] = (byte) BitUtils.getBitsLow(l, from, to);
+                _out.write((int) BitUtils.getBitsLow(l, from, to));
                 from -= 8;
                 to -= 8;
             }
@@ -114,50 +115,55 @@ public class BitBuffer  {
 
         if (bitIdx % 64 != 0) {
             long l = buffer[longIdx];
-            int bidx = 8 * longIdx;
-            int to = (bitIdx % 64) - 1;
-            for (int i = to, j = 7; i >= 0; i--) {
-                b[bidx] = (byte) BitUtils.setBit(j, BitUtils.valueAt(i, l), b[bidx]);
+            int b = 0;
+            int j = 7;
+            for (int i = (bitIdx % 64) - 1; i >= 0; i--) {
+                int bit = (int) BitUtils.valueAt(i, l);
+                b = (int) BitUtils.setBit(j, bit, b);
                 j--;
                 if (j == -1) {
+                    _out.write(b);
+                    b = 0;
                     j = 7;
-                    bidx++;
                 }
             }
+            if (j != 7) _out.write(b);
         }
         
-        out.write(b);
-
+        _out.flush();
+        
     }
     
     public static BitBuffer read(InputStream in) throws IOException {
         
-        int bidx = in.read();
-        bidx = (bidx << 8) | in.read();
-        bidx = (bidx << 8) | in.read();
-        bidx = (bidx << 8) | in.read();
+        BufferedInputStream _in = new BufferedInputStream(in);
+        
+        int bidx = _in.read();
+        bidx = (bidx << 8) | _in.read();
+        bidx = (bidx << 8) | _in.read();
+        bidx = (bidx << 8) | _in.read();
         
         BitBuffer bb = new BitBuffer(bidx % 64 == 0 ? bidx >> 6 : (bidx >> 6) + 1);
         bb.bitIdx = bidx;
-        bb.longIdx = bb.buffer.length - 1;
+        bb.longIdx = bidx >> 6;
         
         for (int i = 0; i < bb.longIdx; i++) {
-            long l = in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
-            l = (l << 8) | in.read();
+            long l = _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
+            l = (l << 8) | _in.read();
             bb.buffer[i] = l;
         }
-        
         if (bidx % 64 != 0) {
-            int b = 0;
+            int recorded = (bidx - 1) % 8 + 1;
+            int b;
             long l = 0;
-            while ((b = in.read()) != -1) l = (l << 8) | b;
-            bb.buffer[bb.longIdx] = l;
+            while ((b = _in.read()) != -1) l = (l << 8) | b;
+            bb.buffer[bb.longIdx] = l >> 8 - recorded;
         }
         
         return bb;
@@ -172,8 +178,9 @@ public class BitBuffer  {
         for (int i = 0; i < longIdx; i++) 
             sb.append(BitUtils.toFullBinaryString(buffer[i]));
         
-        long l = buffer[longIdx];
-        for (int i = (bitIdx % 64) - 1; i >= 0; i--) sb.append(BitUtils.valueAt(i, l));
+        for (int i = (bitIdx % 64) - 1; i >= 0; i--) 
+            sb.append(BitUtils.valueAt(i, buffer[longIdx]));
+        
         sb.append(']');
         return sb.toString();
     }
