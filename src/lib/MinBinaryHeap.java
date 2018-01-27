@@ -159,11 +159,9 @@ public class MinBinaryHeap<E> {
         int idx = indexOf.get(e);
         priority[idx] = p;
         int parent = parent(idx);
-        if (parent != -1) {
-            double pp = priority[parent(idx)];
-            if (pp > p) 
-                emerge(idx);
-        } else 
+        if (parent != -1 && priority[parent(idx)] > p) 
+            emerge(idx);
+        else 
             drown(idx);
     }
 
