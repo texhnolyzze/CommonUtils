@@ -73,7 +73,7 @@ public class UFS<E> {
 
         for (int n = 0; temp2 != representative; temp1 = temp2, temp2 = parentOf.get(temp1)) {
             n += sizeOf.get(temp1);
-                            parentOf.put(temp1, representative);
+            parentOf.put(temp1, representative);
             sizeOf.put(temp2, sizeOf.get(temp2) - n);
         }
 

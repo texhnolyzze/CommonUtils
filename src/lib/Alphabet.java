@@ -11,19 +11,19 @@ import java.util.Set;
  */
 public class Alphabet {
     
-    private char[] alpha;
     private Map<Character, Integer> indexOf;
 
+    private char[] alphabet;
     private int from;
 
     private Alphabet() {}
 
     public int size() {
-        return alpha.length;
+        return alphabet.length;
     }
 
     public char charBy(int index) {
-        return alpha[index];
+        return alphabet[index];
     }
 
     public int indexOf(char c) {
@@ -43,34 +43,27 @@ public class Alphabet {
     }
 
     public static Alphabet fromUTF16Range(int from, int to) {
-
         Alphabet a = new Alphabet();
         a.from = from;
-
-        a.alpha = new char[from - to + 1];
-
-        for (int i = from; i <= to; i++) a.alpha[i - from] = (char) i;
-
+        a.alphabet = new char[from - to + 1];
+        for (int i = from; i <= to; i++) a.alphabet[i - from] = (char) i;
         return a;
-
     }
 
-    public static Alphabet fromChars(char[] alpha) {
-
+    public static Alphabet fromChars(char[] alphabet) {
         Alphabet a = new Alphabet();
         a.indexOf = new HashMap<>();
         Set<Character> set = new HashSet<>();
-        for (char c : alpha) set.add(c);
-
-        int idx = 0;
-        a.alpha = new char[set.size()];
-        for (char c : set) {
-            a.alpha[idx] = c;
-            a.indexOf.put(c, idx++);
+        for (char c : alphabet) {
+            if (!set.contains(c)) 
+                set.add(c);
+            else
+                throw new IllegalArgumentException("Char " + c + " is not unic.");
         }
-
+        a.alphabet = alphabet;
+        for (int i = 0; i < alphabet.length; i++) 
+            a.indexOf.put(alphabet[i], i);
         return a;
-
     }
     
 }

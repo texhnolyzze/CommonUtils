@@ -40,11 +40,13 @@ public class PrefixTree<E> {
     }
 
     private boolean containsVal(E e, Node<E> n) {
-        if (n.elem.equals(e)) return true;
+        if (n.elem.equals(e)) 
+            return true;
         else {
             for (Node<E> child : n.childs.values()) {
                 boolean b = containsVal(e, child);
-                if (b) return true;
+                if (b) 
+                    return true;
             }
         }
         return false;
@@ -55,7 +57,8 @@ public class PrefixTree<E> {
     }
     
     private E get(String key, int i, Node<E> n) {
-        if (n == null) return null;
+        if (n == null) 
+            return null;
         else { 
             if (i < key.length()) 
                 return get(key, i + 1, n.childs.get(key.charAt(i)));
@@ -72,9 +75,8 @@ public class PrefixTree<E> {
     }
     
     private Node<E> put(String key, E e, int i, Node<E> n) {
-        
-        if (n == null) n = new Node<>();
-        
+        if (n == null) 
+            n = new Node<>();
         if (i < key.length()) {
             Node<E> child = n.childs.get(key.charAt(i));
             n.childs.put(key.charAt(i), put(key, e, i + 1, child));
@@ -82,8 +84,7 @@ public class PrefixTree<E> {
             prevVal = n.elem;
             n.elem = e;
         }
-        return n;
-        
+        return n;   
     }
     
     public E remove(String key) {
@@ -94,23 +95,18 @@ public class PrefixTree<E> {
     }
     
     private Node<E> remove(String key, int i, Node<E> n) {
-        
-        if (n == null) return null;
-        
+        if (n == null) 
+            return null;
         if (i < key.length()) {
-            
             Node<E> child = n.childs.get(key.charAt(i));
             child = remove(key, i + 1, child);
             if (child == null) 
                 n.childs.remove(key.charAt(i));
-            
         } else {
             prevVal = n.elem;
             n.elem = null;
         }
-        
         return (n.elem != null || !n.childs.isEmpty()) ? n : null;
-        
     }
         
     public Collection<Pair<String, E>> keysWithPrefix(String prefix) {
@@ -124,19 +120,18 @@ public class PrefixTree<E> {
     }
     
     private void downToPrefix(Collection<Pair<String, E>> c, String prefix, int i, Node<E> n) {
-        if (n == null) return;
-        if (i < prefix.length()) {
+        if (n == null) 
+            return;
+        if (i < prefix.length()) 
             downToPrefix(c, prefix, i + 1, n.childs.get(prefix.charAt(i)));
-        } else {
+        else
             collectKeys(c, new StringBuilder(prefix), n);
-        }
     }
     
     private void collectKeys(Collection<Pair<String, E>> c, StringBuilder sb, Node<E> n) {
         if (n.elem != null) c.add(new Pair<>(sb.toString(), n.elem));
-        for (Map.Entry<Character, Node<E>> child : n.childs.entrySet()) {
+        for (Map.Entry<Character, Node<E>> child : n.childs.entrySet()) 
             collectKeys(c, sb.append(child.getKey().charValue()), child.getValue());
-        }
         sb.setLength(sb.length() - 1);
     }
     

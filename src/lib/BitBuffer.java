@@ -94,20 +94,20 @@ public class BitBuffer  {
 	
     public void write(OutputStream out) throws IOException {
         
-        BufferedOutputStream _out = new BufferedOutputStream(out);
+        BufferedOutputStream bout = new BufferedOutputStream(out);
         
         if (bitIdx == 0) throw new IllegalStateException("There is no data in buffer to write.");
         
-        _out.write(bitIdx >> 24); 
-        _out.write(bitIdx >> 16);
-        _out.write(bitIdx >> 8);
-        _out.write(bitIdx);
+        bout.write(bitIdx >> 24); 
+        bout.write(bitIdx >> 16);
+        bout.write(bitIdx >> 8);
+        bout.write(bitIdx);
 
         for (int lidx = 0; lidx < longIdx; lidx++) {
             long l = buffer[lidx];
             int from = 56, to = 63;
             for (int bidx = 0; bidx < 8; bidx++) {
-                _out.write((int) BitUtils.getBitsLow(l, from, to));
+                bout.write((int) BitUtils.getBitsLow(l, from, to));
                 from -= 8;
                 to -= 8;
             }
@@ -119,50 +119,50 @@ public class BitBuffer  {
             int j = 7;
             for (int i = (bitIdx % 64) - 1; i >= 0; i--) {
                 int bit = (int) BitUtils.valueAt(i, l);
-                b = (int) BitUtils.setBit(j, bit, b);
+                b = BitUtils.setBit(j, bit, b);
                 j--;
                 if (j == -1) {
-                    _out.write(b);
+                    bout.write(b);
                     b = 0;
                     j = 7;
                 }
             }
-            if (j != 7) _out.write(b);
+            if (j != 7) bout.write(b);
         }
         
-        _out.flush();
+        bout.flush();
         
     }
     
     public static BitBuffer read(InputStream in) throws IOException {
         
-        BufferedInputStream _in = new BufferedInputStream(in);
+        BufferedInputStream bin = new BufferedInputStream(in);
         
-        int bidx = _in.read();
-        bidx = (bidx << 8) | _in.read();
-        bidx = (bidx << 8) | _in.read();
-        bidx = (bidx << 8) | _in.read();
+        int bidx = bin.read();
+        bidx = (bidx << 8) | bin.read();
+        bidx = (bidx << 8) | bin.read();
+        bidx = (bidx << 8) | bin.read();
         
         BitBuffer bb = new BitBuffer(bidx % 64 == 0 ? bidx >> 6 : (bidx >> 6) + 1);
         bb.bitIdx = bidx;
         bb.longIdx = bidx >> 6;
         
         for (int i = 0; i < bb.longIdx; i++) {
-            long l = _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
-            l = (l << 8) | _in.read();
+            long l = bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
+            l = (l << 8) | bin.read();
             bb.buffer[i] = l;
         }
         if (bidx % 64 != 0) {
             int recorded = (bidx - 1) % 8 + 1;
             int b;
             long l = 0;
-            while ((b = _in.read()) != -1) l = (l << 8) | b;
+            while ((b = bin.read()) != -1) l = (l << 8) | b;
             bb.buffer[bb.longIdx] = l >> 8 - recorded;
         }
         

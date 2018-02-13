@@ -151,7 +151,7 @@ public class ProxyExtractor {
         
         for (int i = 1; i < split.length; i++) {
             int n = Integer.parseInt(split[i], 16);
-            base64 += fromCharCode(n);
+            base64 += Character.toChars(n);
         }
         
         sb.append(decode(base64));
@@ -172,12 +172,6 @@ public class ProxyExtractor {
         
         return sb.toString().split(":");
         
-    }
-    
-    private static String fromCharCode(int... codePoints) {
-        StringBuilder sb = new StringBuilder(codePoints.length);
-        for (int codePoint : codePoints) sb.append(Character.toChars(codePoint));
-        return sb.toString();
     }
     
     private static String decode(String s) {
