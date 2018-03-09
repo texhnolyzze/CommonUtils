@@ -78,7 +78,13 @@ public class Alphabet implements Comparator<String> {
     }
 
     public static Alphabet fromChars(char[] alphabet) {
-        Alphabet a = new Alphabet(false);
+        boolean UTF16Ordering = true;
+        for (int i = 1; i < alphabet.length; i++) {
+            if (alphabet[i] < alphabet[i - 1]) {
+                UTF16Ordering = false;
+                break;
+            }
+        }
         Set<Character> set = new HashSet<>();
         for (char c : alphabet) {
             if (!set.contains(c)) 
@@ -86,6 +92,7 @@ public class Alphabet implements Comparator<String> {
             else
                 throw new IllegalArgumentException("Char " + c + " is not unic.");
         }
+        Alphabet a = new Alphabet(UTF16Ordering);
         a.alphabet = alphabet;
         a.indexOf = new HashMap<>();
         for (int i = 0; i < alphabet.length; i++) 

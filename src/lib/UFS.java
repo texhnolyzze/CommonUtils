@@ -33,6 +33,8 @@ public class UFS<E> {
     }
 
     public void makeSet(E e) {
+        if (e == null)
+            return;
         if (!parentOf.containsKey(e)) {
             parentOf.put(e, e);
             sizeOf.put(e, 1);
@@ -95,15 +97,19 @@ public class UFS<E> {
     }
     
     public void remove(E e) {
+        E parent = parentOf.get(e);
+        if (parent == null)
+            return;
         if (sizeOf.get(e) == 1)
-            removeLeaf(e);
-        else if (parentOf.get(e) == e)
+            removeLeaf(e, parent);
+        else if (parent == e)
             removeRepresentative(e);
         else 
-            removeInnerNode(e);
+            removeInnerNode(e, parent);
     }
 
-    private void removeLeaf(E e) {
+    private void removeLeaf(E e, E parent) {
+        decreaseSize(parent);
         sizeOf.remove(e);
         parentOf.remove(e);
     }
@@ -118,10 +124,9 @@ public class UFS<E> {
             parentOf.put(child, newRepresentative);
     }
 
-    private void removeInnerNode(E e) {
+    private void removeInnerNode(E e, E parent) {
+        decreaseSize(parent);
         List<E> childs = getChildsOf(e);
-        E parent = parentOf.get(e);
-        sizeOf.put(parent, sizeOf.get(parent) - 1);
         sizeOf.remove(e);
         parentOf.remove(e);
         for (E child : childs)
@@ -140,6 +145,15 @@ public class UFS<E> {
             }
         }
         return childs;
+    }
+    
+    private void decreaseSize(E parent) {
+        do {
+            sizeOf.put(parent, sizeOf.get(parent) - 1);
+            E temp = parentOf.get(parent); 
+            if (temp == parent)
+                break;
+        } while (true);
     }
     
 }

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
 
 /**
  *
@@ -13,22 +14,30 @@ import java.util.List;
 public class KnapsackProblemSolver {
 
     
-    public static Triple<Double, Double, Collection<Item>> solve(Item[] items, boolean sorted, double cap) {
-        
+    public static Triple<Double, Double, Collection<Item>> solve(Collection<Item> items, boolean sorted, double cap) {
+        Collection<Item> itemsPtr = items; 
         Item max = new Item() {
             public double value() {return Double.NEGATIVE_INFINITY;}
             public double weight() {return Double.POSITIVE_INFINITY;}
         };
         
-        if (!sorted) Arrays.sort(items);
+        if (!sorted) {
+            if (!(itemsPtr instanceof SortedSet)) {
+                if (!(itemsPtr instanceof List)) {
+                    itemsPtr = new ArrayList<>(itemsPtr);
+                }
+                Collections.sort((List<Item>) itemsPtr);
+            }
+        }
         
-        for (int i = 0; i < items.length; i++)
-                if (items[i].value() > max.value() && items[i].weight() <= cap)
-                    max = items[i];
+        for (Item item : itemsPtr) {
+            if (item.value() > max.value() && item.weight() <= cap)
+                max = item;
+        }
         
         double w = 0, v = 0;
         List<Item> result = new ArrayList<>();
-        for (Item i : items) {
+        for (Item i : itemsPtr) {
             if (w + i.weight() <= cap) {
                 result.add(i);
                 v += i.value();
