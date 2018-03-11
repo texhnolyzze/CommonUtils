@@ -1,8 +1,11 @@
 package lib;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -58,6 +61,7 @@ public class MinBinaryHeap<E> {
     }
     
     public E popMin() {
+        System.out.println(indexOf);
         size--;
         E e = heap[0];
         heap[0] = heap[size];
@@ -70,6 +74,8 @@ public class MinBinaryHeap<E> {
         return e;
     }
     
+//  Call this method if the E is mutable type and the state on 
+//  which it's ordering depends changed
     public void priorityChanged(E e) {
         Integer idx = indexOf.get(e);
         if (idx == null) return;
@@ -87,18 +93,27 @@ public class MinBinaryHeap<E> {
     }
     
     public static <E> MinBinaryHeap<E> fromArray(E[] arr, Comparator<E> cmp) {
-        int N = arr.length;
+        Set<E> set = new HashSet<>();
+        set.addAll(Arrays.asList(arr));
+        E[] heapRaw = (E[]) set.toArray();
+        int N = heapRaw.length;
         for (int i = N / 2; i >= 0; i--) 
-            drown(i, N, arr, null, cmp);
+            drown(i, N, heapRaw, null, cmp);
         Map<E, Integer> indexOf = new HashMap<>();
         for (int i = 0; i < N; i++) 
-            indexOf.put(arr[i], i);
+            indexOf.put(heapRaw[i], i);
         MinBinaryHeap<E> heap = new MinBinaryHeap<>();
         heap.cmp = cmp;
-        heap.heap = arr;
+        heap.heap = heapRaw;
         heap.size = N;
         heap.indexOf = indexOf;
         return heap;
+    }
+    
+    public static <E> void heapify(E[] arr, Comparator<E> cmp) {
+        int N = arr.length;
+        for (int i = N / 2; i >= 0; i--) 
+            drown(i, N, arr, null, cmp);
     }
     
     private static <E> void drown(int idx, int size, E[] heap, final Map<E, Integer> indexOf, Comparator<E> cmp) {
@@ -111,20 +126,24 @@ public class MinBinaryHeap<E> {
                 int lrcmp = right < size ? cmp.compare(heap[left], heap[right]) : -1;
                 if (lrcmp <= 0) {
                     heap[p] = heap[left];
+                    if (indexOf != null) 
+                        indexOf.put(heap[p], p);
                     p = left;
                 } else {
                     heap[p] = heap[right];
+                    if (indexOf != null)
+                        indexOf.put(heap[p], p);
                     p = right;
                 }
             } else {
                 if (right < size && cmp.compare(e, heap[right]) > 0) {
                     heap[p] = heap[right];
+                    if (indexOf != null)
+                        indexOf.put(heap[p], p);
                     p = right;
                 } else
                     break;
             }
-            if (indexOf != null) 
-                indexOf.put(heap[p], p);
             left = left(p);
             right = right(p);
         }
