@@ -15,11 +15,11 @@ public class TickOscillator {
         reset(freq);
     }
     
-    public boolean getState() {
+    public boolean state() {
         return increment;
     }
     
-    public int getTicksPassed() {
+    public int ticksPassed() {
         return ticksPassed;
     }
     

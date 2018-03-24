@@ -28,7 +28,7 @@ public class UFS<E> {
         n = 0;
     }
 
-    public int getNumOfSets() {
+    public int numOfSets() {
         return n;
     }
 

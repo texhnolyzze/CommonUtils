@@ -16,12 +16,16 @@ public class Timer {
         if (paused) dt = 0;
     }
     
-    public long getMsPassed() {
+    public long msPassed() {
         return paused ? dt : System.currentTimeMillis() - stamp;
     }
     
     public boolean passed(long ms) {
-        return getMsPassed() >= ms;
+        return msPassed() >= ms;
+    }
+    
+    public boolean paused() {
+        return paused;
     }
     
     public void pause() {

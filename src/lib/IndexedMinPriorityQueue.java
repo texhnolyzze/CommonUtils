@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @author Texhnolyze
  */
-public class MinBinaryHeap<E> {
+public class IndexedMinPriorityQueue<E> {
     
     private E[] heap;
     private Map<E, Integer> indexOf;
@@ -19,17 +19,17 @@ public class MinBinaryHeap<E> {
     
     private int size;
     
-    public MinBinaryHeap(Comparator<E> cmp) {
+    public IndexedMinPriorityQueue(Comparator<E> cmp) {
         this(32, cmp);
     }
     
-    public MinBinaryHeap(int initCap, Comparator<E> cmp) {
+    public IndexedMinPriorityQueue(int initCap, Comparator<E> cmp) {
         this.cmp = cmp;
         heap = (E[]) new Object[initCap];
         indexOf = new HashMap<>();
     }
     
-    private MinBinaryHeap() {}
+    private IndexedMinPriorityQueue() {}
     
     public void clear() {
         heap = (E[]) new Object[32];
@@ -37,7 +37,7 @@ public class MinBinaryHeap<E> {
         size = 0;
     }
     
-    public int getSize() {
+    public int size() {
         return size;
     }
     
@@ -45,7 +45,11 @@ public class MinBinaryHeap<E> {
         return size == 0;
     }
     
-    public E peekMin() {
+    public boolean contains(E e) {
+        return indexOf.containsKey(e);
+    }
+    
+    public E peek() {
         return heap[0];
     }
     
@@ -60,8 +64,7 @@ public class MinBinaryHeap<E> {
         size++;
     }
     
-    public E popMin() {
-        System.out.println(indexOf);
+    public E pop() {
         size--;
         E e = heap[0];
         heap[0] = heap[size];
@@ -92,7 +95,7 @@ public class MinBinaryHeap<E> {
         heap = h;
     }
     
-    public static <E> MinBinaryHeap<E> fromArray(E[] arr, Comparator<E> cmp) {
+    public static <E> IndexedMinPriorityQueue<E> fromArray(E[] arr, Comparator<E> cmp) {
         Set<E> set = new HashSet<>();
         set.addAll(Arrays.asList(arr));
         E[] heapRaw = (E[]) set.toArray();
@@ -102,7 +105,7 @@ public class MinBinaryHeap<E> {
         Map<E, Integer> indexOf = new HashMap<>();
         for (int i = 0; i < N; i++) 
             indexOf.put(heapRaw[i], i);
-        MinBinaryHeap<E> heap = new MinBinaryHeap<>();
+        IndexedMinPriorityQueue<E> heap = new IndexedMinPriorityQueue<>();
         heap.cmp = cmp;
         heap.heap = heapRaw;
         heap.size = N;
