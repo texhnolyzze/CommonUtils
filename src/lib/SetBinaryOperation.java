@@ -189,20 +189,23 @@ public enum SetBinaryOperation {
     }
     
     public <E> Set<E> constructNewSet(Set<E> a, Set<E> b) {
-        E[] arr = (E[]) toArray(a, b);
-        return new HashSet<>(Arrays.asList(arr));
+        Set<E> res = new HashSet<>(size(a, b));
+        Iterator<E> it = iterator(a, b);
+        while (it.hasNext()) 
+            res.add(it.next());
+        return res;
     }
     
     public <E> Set<E> delegate(Set<E> a, Set<E> b) {
         return new SetDelegator<>(a, b, this);
     }
         
-    private static class SetDelegator<T> implements Set<T> {
+    private static class SetDelegator<E> implements Set<E> {
         
         private SetBinaryOperation op;
-        private Set<T> a, b;
+        private Set<E> a, b;
         
-        private SetDelegator(Set<T> a, Set<T> b, SetBinaryOperation op) {
+        private SetDelegator(Set<E> a, Set<E> b, SetBinaryOperation op) {
             this.a = a;
             this.b = b;
             this.op = op;
@@ -233,7 +236,7 @@ public enum SetBinaryOperation {
         }
 
         @Override
-        public Iterator<T> iterator() {
+        public Iterator<E> iterator() {
             return op.iterator(a, b);
         }
 
@@ -243,8 +246,8 @@ public enum SetBinaryOperation {
         }
         
         @Override public void clear() {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean add(T e) {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean addAll(Collection<? extends T> c) {throw new UnsupportedOperationException("Not supported.");}
+        @Override public boolean add(E e) {throw new UnsupportedOperationException("Not supported.");}
+        @Override public boolean addAll(Collection<? extends E> c) {throw new UnsupportedOperationException("Not supported.");}
         @Override public boolean remove(Object o) {throw new UnsupportedOperationException("Not supported.");}
         @Override public boolean removeAll(Collection<?> c) {throw new UnsupportedOperationException("Not supported.");}
         @Override public boolean retainAll(Collection<?> c) {throw new UnsupportedOperationException("Not supported.");}
