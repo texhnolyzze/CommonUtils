@@ -13,6 +13,11 @@ public class Sandbox {
         Set<Integer> c = SetBinaryOperation.SYMMETRIC_DIFFERENCE.delegate(a, b);
         for (int i : c)
             System.out.println(i);
+        c.clear();
+        System.out.println(a);
+        System.out.println(b);
+        for (int i : c)
+            System.out.println(i);
     }
     
 }

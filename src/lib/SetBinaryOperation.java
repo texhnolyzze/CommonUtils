@@ -1,6 +1,5 @@
 package lib;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,6 +49,22 @@ public enum SetBinaryOperation {
             return null;
         }
 
+        @Override
+        boolean add(Set a, Set b, Object obj) {
+            return a.add(obj) || b.add(obj);
+        }
+
+        @Override
+        void clear(Set a, Set b) {
+            a.clear();
+            b.clear();
+        }
+
+        @Override
+        boolean remove(Set a, Set b, Object obj) {
+            return a.remove(obj) | b.remove(obj);
+        }
+
     }, INTERSECTION {
 
         @Override
@@ -85,6 +100,21 @@ public enum SetBinaryOperation {
             return null;
         }
 
+        @Override
+        boolean add(Set a, Set b, Object obj) {
+            return a.add(obj) | b.add(obj);
+        }
+
+        @Override
+        void clear(Set a, Set b) {
+            a.removeAll(b);
+        }
+
+        @Override
+        boolean remove(Set a, Set b, Object obj) {
+            return a.remove(obj) && b.remove(obj);
+        }
+
     }, DIFFERENCE {
 
         @Override
@@ -118,6 +148,21 @@ public enum SetBinaryOperation {
                     return obj;
             }
             return null;
+        }
+
+        @Override
+        boolean add(Set a, Set b, Object obj) {
+            return a.add(obj) | b.remove(obj);
+        }
+
+        @Override
+        void clear(Set a, Set b) {
+            a.retainAll(b);
+        }
+
+        @Override
+        boolean remove(Set a, Set b, Object obj) {
+            return a.remove(obj);
         }
 
     }, SYMMETRIC_DIFFERENCE {
@@ -158,13 +203,35 @@ public enum SetBinaryOperation {
             return null;
         }
 
+        @Override
+        boolean add(Set a, Set b, Object obj) {
+            boolean res = a.remove(obj) & b.remove(obj);
+            a.add(obj);
+            return res;
+        }
+
+        @Override
+        void clear(Set a, Set b) {
+            a.retainAll(b);
+            b.retainAll(a);
+        }
+
+        @Override
+        boolean remove(Set a, Set b, Object obj) {
+            return a.add(obj) & b.add(obj);
+        }
+
     };
 
     abstract int size(Set a, Set b);
     abstract boolean contains(Set a, Set b, Object obj);
+    abstract boolean add(Set a, Set b, Object obj);
+    abstract boolean remove(Set a, Set b, Object obj);
+    abstract void clear(Set a, Set b);
     abstract Object[] toArray(Set a, Set b);
     abstract Object next(Set a, Set b, Iterator ait, Iterator bit);
-
+    
+    
     Iterator iterator(Set a, Set b) {
         return new Iterator() {
             
@@ -244,12 +311,38 @@ public enum SetBinaryOperation {
         public Object[] toArray() {
             return op.toArray(a, b);
         }
+
+        @Override 
+        public boolean add(E e) {
+            return op.add(a, b, e);
+        }
         
-        @Override public void clear() {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean add(E e) {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean addAll(Collection<? extends E> c) {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean remove(Object o) {throw new UnsupportedOperationException("Not supported.");}
-        @Override public boolean removeAll(Collection<?> c) {throw new UnsupportedOperationException("Not supported.");}
+        @Override
+        public boolean addAll(Collection<? extends E> c) {
+            boolean b = false;
+            for (E e : c)
+                b = add(e);
+            return b;
+        }
+        
+        @Override 
+        public void clear() {
+            op.clear(a, b);
+        }
+        
+        @Override 
+        public boolean remove(Object obj) {
+            return op.remove(a, b, obj);
+        }
+        
+        @Override 
+        public boolean removeAll(Collection<?> c) {
+            boolean b = false;
+            for (Object obj : c)
+                b = remove(obj);
+            return b;
+        }
+        
         @Override public boolean retainAll(Collection<?> c) {throw new UnsupportedOperationException("Not supported.");}
         @Override public <T> T[] toArray(T[] a) {throw new UnsupportedOperationException("Not supported.");}        
    
