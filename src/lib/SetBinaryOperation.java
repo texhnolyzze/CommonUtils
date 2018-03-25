@@ -29,12 +29,10 @@ public enum SetBinaryOperation {
         }
 
         @Override
-        Object[] toArray(Set a, Set b) {
+        void toArray0(Set a, Set b, Object[] dest) {
             int i = 0;
-            Object[] arr = new Object[size(a, b)];
-            for (Object obj : a) {arr[i++] = obj;}
-            for (Object obj : b) {if (!a.contains(obj)) arr[i++] = obj;}
-            return arr;
+            for (Object obj : a) {dest[i++] = obj;}
+            for (Object obj : b) {if (!a.contains(obj)) dest[i++] = obj;}
         }
 
         @Override
@@ -51,7 +49,9 @@ public enum SetBinaryOperation {
 
         @Override
         boolean add(Set a, Set b, Object obj) {
-            return a.add(obj) || b.add(obj);
+            if (a.contains(obj)) return false;
+            if (b.contains(obj)) return false;
+            return a.add(obj);
         }
 
         @Override
@@ -83,11 +83,9 @@ public enum SetBinaryOperation {
         }
 
         @Override
-        Object[] toArray(Set a, Set b) {
+        void toArray0(Set a, Set b, Object[] dest) {
             int i = 0;
-            Object[] arr = new Object[size(a, b)];
-            for (Object obj : a) {if (b.contains(obj)) arr[i++] = obj;}
-            return arr;
+            for (Object obj : a) {if (b.contains(obj)) dest[i++] = obj;}
         }
 
         @Override
@@ -133,11 +131,9 @@ public enum SetBinaryOperation {
         }
 
         @Override
-        Object[] toArray(Set a, Set b) {
+        void toArray0(Set a, Set b, Object[] dest) {
             int i = 0;
-            Object[] arr = new Object[size(a, b)];
-            for (Object obj : a) {if (!b.contains(obj)) arr[i++] = obj;}
-            return arr;
+            for (Object obj : a) {if (!b.contains(obj)) dest[i++] = obj;}
         }
 
         @Override
@@ -162,7 +158,7 @@ public enum SetBinaryOperation {
 
         @Override
         boolean remove(Set a, Set b, Object obj) {
-            return a.remove(obj);
+            return a.remove(obj) && !b.contains(obj);
         }
 
     }, SYMMETRIC_DIFFERENCE {
@@ -180,12 +176,10 @@ public enum SetBinaryOperation {
         }
 
         @Override
-        Object[] toArray(Set a, Set b) {
+        void toArray0(Set a, Set b, Object[] dest) {
             int i = 0;
-            Object[] arr = new Object[size(a, b)];
-            for (Object obj : a) {if (!b.contains(obj)) arr[i++] = obj;}
-            for (Object obj : b) {if (!a.contains(obj)) arr[i++] = obj;}
-            return arr;
+            for (Object obj : a) {if (!b.contains(obj)) dest[i++] = obj;}
+            for (Object obj : b) {if (!a.contains(obj)) dest[i++] = obj;}
         }
 
         @Override
@@ -205,9 +199,15 @@ public enum SetBinaryOperation {
 
         @Override
         boolean add(Set a, Set b, Object obj) {
-            boolean res = a.remove(obj) & b.remove(obj);
-            a.add(obj);
-            return res;
+            if (a.contains(obj)) {
+                if (b.contains(obj)) {
+                    return b.remove(obj);
+                }
+            } else {
+                if (!b.contains(obj))
+                    return a.add(obj);
+            }
+            return false;
         }
 
         @Override
@@ -218,7 +218,15 @@ public enum SetBinaryOperation {
 
         @Override
         boolean remove(Set a, Set b, Object obj) {
-            return a.add(obj) & b.add(obj);
+            if (a.contains(obj)) {
+                if (!b.contains(obj)) {
+                    return a.remove(obj);
+                }
+            } else {
+                if (b.contains(obj))
+                    return b.remove(obj);
+            }
+            return false;
         }
 
     };
@@ -228,9 +236,14 @@ public enum SetBinaryOperation {
     abstract boolean add(Set a, Set b, Object obj);
     abstract boolean remove(Set a, Set b, Object obj);
     abstract void clear(Set a, Set b);
-    abstract Object[] toArray(Set a, Set b);
+    abstract void toArray0(Set a, Set b, Object[] dest);
     abstract Object next(Set a, Set b, Iterator ait, Iterator bit);
     
+    Object[] toArray(Set a, Set b) {
+        Object[] arr = new Object[size(a, b)];
+        toArray0(a, b, arr);
+        return arr;
+    }
     
     Iterator iterator(Set a, Set b) {
         return new Iterator() {
@@ -263,19 +276,32 @@ public enum SetBinaryOperation {
         return res;
     }
     
-    public <E> Set<E> delegate(Set<E> a, Set<E> b) {
-        return new SetDelegator<>(a, b, this);
+    public <E> Result<E> delegate(Set<E> a, Set<E> b) {
+        return new Result<>(a, b, this);
     }
         
-    private static class SetDelegator<E> implements Set<E> {
+    public static class Result<E> implements Set<E> {
         
-        private SetBinaryOperation op;
-        private Set<E> a, b;
+        private final Set<E> a;
+        private final Set<E> b;
+        private final SetBinaryOperation op;
         
-        private SetDelegator(Set<E> a, Set<E> b, SetBinaryOperation op) {
+        private Result(Set<E> a, Set<E> b, SetBinaryOperation op) {
             this.a = a;
             this.b = b;
             this.op = op;
+        }
+        
+        public Set<E> a() {
+            return a;
+        }
+        
+        public Set<E> b() {
+            return b;
+        }
+        
+        public SetBinaryOperation operation() {
+            return op;
         }
         
         @Override
@@ -319,10 +345,10 @@ public enum SetBinaryOperation {
         
         @Override
         public boolean addAll(Collection<? extends E> c) {
-            boolean b = false;
+            boolean bln = false;
             for (E e : c)
-                b = add(e);
-            return b;
+                bln = add(e);
+            return bln;
         }
         
         @Override 
@@ -337,10 +363,10 @@ public enum SetBinaryOperation {
         
         @Override 
         public boolean removeAll(Collection<?> c) {
-            boolean b = false;
+            boolean bln = false;
             for (Object obj : c)
-                b = remove(obj);
-            return b;
+                bln = remove(obj);
+            return bln;
         }
         
         @Override public boolean retainAll(Collection<?> c) {throw new UnsupportedOperationException("Not supported.");}

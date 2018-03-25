@@ -10,14 +10,14 @@ public class Sandbox {
     public static void main(String[] args) {
         Set<Integer> a = new HashSet<>(Arrays.asList(1, 2, 3, 4));
         Set<Integer> b = new HashSet<>(Arrays.asList(3, 4, 5, 6));
-        Set<Integer> c = SetBinaryOperation.SYMMETRIC_DIFFERENCE.delegate(a, b);
+        Set<Integer> c = SetBinaryOperation.DIFFERENCE.delegate(a, b);
         for (int i : c)
             System.out.println(i);
-        c.clear();
-        System.out.println(a);
-        System.out.println(b);
+        System.out.println(c.add(3));
         for (int i : c)
             System.out.println(i);
+        System.out.println(c.remove(5));
+
     }
     
 }
