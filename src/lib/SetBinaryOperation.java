@@ -347,7 +347,7 @@ public enum SetBinaryOperation {
         public boolean addAll(Collection<? extends E> c) {
             boolean bln = false;
             for (E e : c)
-                bln = add(e);
+                bln = add(e) || bln;
             return bln;
         }
         
@@ -365,7 +365,7 @@ public enum SetBinaryOperation {
         public boolean removeAll(Collection<?> c) {
             boolean bln = false;
             for (Object obj : c)
-                bln = remove(obj);
+                bln = remove(obj) || bln;
             return bln;
         }
         

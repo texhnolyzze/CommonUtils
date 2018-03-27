@@ -1,23 +1,24 @@
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import lib.SetBinaryOperation;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import lib.Alphabet;
+import lib.HuffmanCoding;
+import lib.HuffmanCoding.CodingTree;
 
 
 public class Sandbox {
 
-    public static void main(String[] args) {
-        Set<Integer> a = new HashSet<>(Arrays.asList(1, 2, 3, 4));
-        Set<Integer> b = new HashSet<>(Arrays.asList(3, 4, 5, 6));
-        Set<Integer> c = SetBinaryOperation.DIFFERENCE.delegate(a, b);
-        for (int i : c)
-            System.out.println(i);
-        System.out.println(c.add(3));
-        for (int i : c)
-            System.out.println(i);
-        System.out.println(c.remove(5));
-
+    public static void main(String[] args) throws IOException {
+        
+        CodingTree tree = CodingTree.buildTree("ABRACADABRA");
+        tree.write(new FileOutputStream("123"));
+        tree = CodingTree.readTree(new FileInputStream("123"));
+        Alphabet a = tree.alphabet();
+        System.out.println(a.contains('A'));
+        HuffmanCoding.encode(tree, "ABRACADABRA", new FileOutputStream("123"));
+        System.out.println(HuffmanCoding.decode(tree, new FileInputStream("123")));
+        
     }
     
 }

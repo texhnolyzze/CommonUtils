@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javafx.util.Pair;
 
 /**
  *
@@ -17,7 +16,11 @@ public class ArithmeticExpression {
     private Node root;
     private final Map<String, OperandNode> vars = new HashMap<>();
     
-    public double getVarVal(String var) {
+    public boolean contains(String variable) {
+        return vars.containsKey(variable);
+    }
+    
+    public double getVariableValue(String var) {
         OperandNode n = vars.get(var);
         if (n != null) 
             return n.val;
@@ -25,7 +28,7 @@ public class ArithmeticExpression {
             throw new IllegalArgumentException("There is no variable named " + var + ".");
     }
     
-    public void setVarVal(String var, double val) {
+    public void setVariableValue(String var, double val) {
         OperandNode n = vars.get(var);
         if (n != null) 
             n.val = val;
@@ -44,18 +47,16 @@ public class ArithmeticExpression {
             OperationNode op = (OperationNode) n;
             double[] vals = new double[op.operands.length];
             for (int i = 0; i < vals.length; i++) vals[i] = compute(op.operands[i]);
-            
             return op.func.compute(vals);
-            
         }
     }
     
-    public static ArithmeticExpression create(String ex) {
+    public static ArithmeticExpression parse(String ex) {
         ArithmeticExpression aex = new ArithmeticExpression();
         String trimmedEx = ex.replaceAll("\\s+", "");
         String[] tokens = split(trimmedEx);
         tokens = convertToPostfix(tokens);
-        aex.root = buildTree(tokens, tokens.length - 1, aex.vars).getKey();
+        aex.root = buildTree(tokens, tokens.length - 1, aex.vars).x();
         return aex;
     }
     
@@ -66,7 +67,7 @@ public class ArithmeticExpression {
             case 'n':
                 return new Pair<>(new OperandNode(Double.parseDouble(token.substring(1))), idx);
             case 'v':
-                OperandNode n = null;
+                OperandNode n;
                 String varName = token.substring(1);
                 n = vars.get(varName);
                 if (n == null) {
@@ -82,43 +83,33 @@ public class ArithmeticExpression {
                         op.func = Function.FUNCS.get("u-");
                         op.operands = new Node[1];
                         Pair<Node, Integer> p = buildTree(tokens, i - 1, vars);
-                        op.operands[0] = p.getKey();
-                        i = p.getValue();
+                        op.operands[0] = p.x();
+                        i = p.y();
                     } else {
                         op.func = Function.FUNCS.get(token.substring(2));
                         op.operands = new Node[2];
                         Pair<Node, Integer> child = buildTree(tokens, i - 1, vars);
                         boolean commutative = isCommutative(op.func.name);
-                        
-                        if (commutative) op.operands[0] = child.getKey();
-                        else op.operands[1] = child.getKey();
-                        
-                        i = child.getValue();
-                        
+                        if (commutative) op.operands[0] = child.x();
+                        else op.operands[1] = child.x();
+                        i = child.y();
                         child = buildTree(tokens, i - 1, vars);
-
-                        if (commutative) op.operands[1] = child.getKey();
-                        else op.operands[0] = child.getKey();
-                        
-                        i = child.getValue();
-                        
+                        if (commutative) op.operands[1] = child.x();
+                        else op.operands[0] = child.x();
+                        i = child.y();
                     }
                 } else {
-                    
                     String funcName = token.substring(1);
                     Function f = Function.FUNCS.get(funcName);
                     op.func = f;
                     op.operands = new Node[f.numArgs];
                     for (int j = 0; j < f.numArgs; j++) {
                         Pair<Node, Integer> p = buildTree(tokens, i - 1, vars);
-                        i = p.getValue();
-                        op.operands[j] = p.getKey();
+                        i = p.y();
+                        op.operands[j] = p.x();
                     }
-                    
                 }
-                
                 return new Pair<>(op, i);
-                
         }
     }
     
@@ -127,11 +118,8 @@ public class ArithmeticExpression {
     private static final Pattern FUNC = Pattern.compile("(sqrt|ln|log|sin|cos|tg|exp)");
     
     private static String[] split(String ex) {
-        
         List<String> tokens = new ArrayList<>();
-        
         Matcher num = NUM.matcher(ex), var = VAR.matcher(ex), func = FUNC.matcher(ex);
-        
         for (int i = 0; i < ex.length();) {
             char c = ex.charAt(i);
             switch (c) {
@@ -183,26 +171,18 @@ public class ArithmeticExpression {
                     break;
             }
         }
-        
         return tokens.toArray(new String[tokens.size()]);
-        
     }
     
     
     // the implementation of the sorting station algorithm 
     // whose idea belongs to Edsger Dijkstra
     private static String[] convertToPostfix(String[] tokens) {
-        
-        Stack<String> s = new Stack<>();
-        List<String> postfix = new ArrayList<>();
-        
         boolean ok;
-        
-        for (int i = 0; i < tokens.length; i++) {
-            
-            String token = tokens[i];
-            char c = token.charAt(0);
-            
+        Stack<String> s = new Stack<>();
+        List<String> postfix = new ArrayList<>();        
+        for (String token : tokens) {
+            char c = token.charAt(0);            
             switch (c) {
                 case 'n':
                 case 'v':
@@ -219,7 +199,8 @@ public class ArithmeticExpression {
                         if (t.equals("(")) {
                             ok = true;
                             break;
-                        } else s.push(t);
+                        } else 
+                            s.push(t);
                     }
                     if (!ok)
                         throw new IllegalArgumentException("Bracket or comma passed.");
@@ -233,7 +214,8 @@ public class ArithmeticExpression {
                             if (!s.isEmpty() && s.peek().charAt(0) == 'f') 
                                 postfix.add(s.pop());
                             break;
-                        } else postfix.add(op);
+                        } else 
+                            postfix.add(op);
                     }
                     if (!ok) 
                         throw new IllegalArgumentException("Bracket passed.");
@@ -245,17 +227,20 @@ public class ArithmeticExpression {
                         String op = s.peek();
                         int pp = priorityOf(op);
                         if (left) {
-                            if (p <= pp) postfix.add(s.pop());
-                            else break;
+                            if (p <= pp) 
+                                postfix.add(s.pop());
+                            else 
+                                break;
                         } else {
-                            if (p < pp) postfix.add(s.pop());
-                            else break;
+                            if (p < pp) 
+                                postfix.add(s.pop());
+                            else
+                                break;
                         }
                     }
                     s.push(token);
                     break;
             }
-            
         }
         
         while (!s.isEmpty()) {
@@ -266,7 +251,6 @@ public class ArithmeticExpression {
         }
         
         return postfix.toArray(new String[postfix.size()]);
-        
     }
     
     private static int priorityOf(String op) {
@@ -356,17 +340,13 @@ public class ArithmeticExpression {
     private interface Node {} // marker
     
     private static class OperandNode implements Node {
-        
         double val;
         OperandNode(double val) {this.val = val;}
-        
     }
     
     private static class OperationNode implements Node {
-        
         Function func;
         Node[] operands;
-        
     }
     
 }

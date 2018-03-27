@@ -5,7 +5,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import javafx.util.Pair;
 
 /**
  *
@@ -13,181 +12,180 @@ import javafx.util.Pair;
  */
 public class BitBuffer  {
     
-    private long[] buffer; // the maximum capacity of the buffer is 256 megabytes
+    private int[] buffer;
     
     private int bitIdx;
-    private int longIdx;
+    private int intIdx;
     
-    public BitBuffer() {this(32);}
-    public BitBuffer(int initCap) {buffer = new long[initCap];}
+    public BitBuffer() {this(4);}
+    public BitBuffer(int initCap) {buffer = new int[initCap];}
     
-    //returns the number of bits
+    //returns the number of significant bits
     public int numBits() {
         return bitIdx;
     }
     
-    // returns the number of completely filled longs
-    public int numLongs() {
-        return longIdx;
+    // returns the number of completely filled integers
+    public int numInts() {
+        return intIdx;
     }
     
     
-    public void append(int bit) {
-        if ((bitIdx + 1) >> 6 == buffer.length)
+    public BitBuffer append(int bit) {
+        if ((bitIdx + 1) >> 5 == buffer.length)
             resize(2 * buffer.length);
-        buffer[longIdx] = (buffer[longIdx] << 1) | bit;
-        longIdx = (++bitIdx) >> 6;
+        buffer[intIdx] = buffer[intIdx] | (bit << 31 - (bitIdx % 32));
+        intIdx = (++bitIdx) >> 5;
+        return this;
     }
     
-//  Adds bits to the end of the buffer in order from the 
+//  Adds n bits to the end of the buffer in order from the 
 //  least significant bit to the highest
-    public void append(long bits, int count) {
-        if ((bitIdx + count) >> 6 == buffer.length) 
+    public BitBuffer append(int bits, int n) {
+        if (n <= 0 || n > 32) 
+            throw new IllegalArgumentException("n must be > 0 and <= 32");
+        if ((bitIdx + n) >> 5 == buffer.length) 
             resize(2 * buffer.length);
-        int shift = min(count, 64 - (bitIdx % 64));
-        long r = Long.reverse(BitUtils.getBitsLow(bits, 0, shift - 1)) >>> (64 - shift);
-        buffer[longIdx] = (buffer[longIdx] << shift) | r;
-        bitIdx += count;
-        longIdx = bitIdx >> 6;
-        if (count != shift) {
-            long l = Long.reverse(BitUtils.getBitsLow(bits, shift, count - 1)) >>> (64 - (count - shift));
-            buffer[longIdx] = buffer[longIdx] | l;
+        int bitsRec = bitIdx % 32;
+        int shift = min(n, 32 - bitsRec);
+        int r = Integer.reverse(BitUtils.getBitsLow(bits, 0, shift - 1)) >>> bitsRec;
+        buffer[intIdx] = buffer[intIdx] | r;
+        bitIdx += n;
+        intIdx = bitIdx >> 5;
+        if (shift != n) {
+            int l = Integer.reverse(BitUtils.getBitsLow(bits, shift, n - 1));
+            buffer[intIdx] = buffer[intIdx] | l;
         }
+        return this;
     }
     
-//  returns a pair in which the key is an array of longs whose bits follow 
+    public BitBuffer append(BitBuffer src) {
+        return append(src, 0, src.bitIdx - 1);
+    }
+    
+    public BitBuffer append(BitBuffer src, int frombit, int tobit) {
+        if (frombit < 0 || frombit > tobit || tobit >= src.bitIdx)
+            throw new IllegalArgumentException("0 <= frombit <= tobit < src.numBits()");
+        for (int i = frombit; i <= tobit; i++)
+            append(src.bitAt0(i)); 
+        return this;
+    }
+    
+//  sets the number of significant bits to the sbits
+    public BitBuffer setNumSignificantBits(int sbits) {
+        if (sbits < 0 || sbits > bitIdx)
+            throw new IllegalArgumentException("sbits must be in the range from 0 to the numBits().");
+        if (sbits == bitIdx)
+            return this;
+        bitIdx = sbits;
+        intIdx = bitIdx >> 5;
+        if (intIdx + 1 < buffer.length / 4)
+            resize(max(1, 2 * intIdx));
+        return this;
+    }
+    
+    public BitBuffer copy() {
+        BitBuffer copy = new BitBuffer(bitIdx % 32 == 0 ? intIdx : intIdx + 1);
+        System.arraycopy(buffer, 0, copy.buffer, 0, copy.buffer.length);
+        copy.bitIdx = bitIdx;
+        copy.intIdx = intIdx;
+        return copy;
+    }
+    
+//  returns a pair in which the key is an array of integers whose bits follow 
 //  in the order of their recording from highest bit to the least, and the value is the 
 //  number of recorded bits in the last element of the array
-    public Pair<long[], Integer> raw() {
-        long[] raw = new long[bitIdx % 64 == 0 ? longIdx : longIdx + 1];
-        System.arraycopy(buffer, 0, raw, 0, longIdx);
-        if (bitIdx % 64 != 0) raw[longIdx] = buffer[longIdx] << (64 - (bitIdx % 64));
-        return new Pair<>(raw, bitIdx % 64);
+    public Pair<int[], Integer> raw() {
+        int[] raw = new int[intIdx + 1];
+        System.arraycopy(buffer, 0, raw, 0, intIdx);
+        if (bitIdx % 32 != 0) 
+            raw[intIdx] = buffer[intIdx];
+        return new Pair<>(raw, bitIdx % 32);
     }
     
     private void resize(int cap) {
-        long[] b = new long[cap];
-        System.arraycopy(buffer, 0, b, 0, longIdx);
-        if (bitIdx % 64 != 0) b[longIdx] = buffer[longIdx];
+        int[] b = new int[cap];
+        System.arraycopy(buffer, 0, b, 0, intIdx);
+        if (bitIdx % 32 != 0) b[intIdx] = buffer[intIdx];
         buffer = b;
     }
     
-    public long getBitAt(int idx) {
-        if (idx >= bitIdx) throw new IndexOutOfBoundsException(idx + "");
-        int lIdx = idx >> 6;
-        if (lIdx == longIdx) 
-            return BitUtils.valueAt((bitIdx % 64) - (idx % 64) - 1, buffer[lIdx]);
-        else 
-            return BitUtils.valueAt(63 - (idx % 64), buffer[lIdx]);
+    public int bitAt(int idx) {
+        if (idx < 0 || idx >= bitIdx) 
+            throw new IndexOutOfBoundsException(idx + "");
+        return bitAt0(idx);
     }
     
-    public void setBitAt(int idx, int val) {
-        if (idx >= bitIdx) throw new IndexOutOfBoundsException(idx + "");
-        else {
-            int lIdx = idx >> 6;
-            if (lIdx == longIdx) 
-                buffer[lIdx] = BitUtils.setBit((bitIdx % 64) - (idx % 64) - 1, val, buffer[lIdx]);
-            else 
-                buffer[lIdx] = BitUtils.setBit(63 - (idx % 64), val, buffer[lIdx]);
-        }
+    private int bitAt0(int idx) {
+        int iidx = idx >> 5;
+        return BitUtils.valueAt(31 - (idx % 32), buffer[iidx]);
+    }
+    
+    public BitBuffer setBitAt(int idx, int val) {
+        if (idx >= bitIdx) 
+            throw new IndexOutOfBoundsException(idx + "");
+        int iidx = idx >> 5;
+        buffer[iidx] = BitUtils.setBit(31 - (idx % 32), val, buffer[iidx]);
+        return this;
     }
 	
     public void write(OutputStream out) throws IOException {
-        
         BufferedOutputStream bout = new BufferedOutputStream(out);
-        
-        if (bitIdx == 0) throw new IllegalStateException("There is no data in buffer to write.");
-        
-        bout.write(bitIdx >> 24); 
-        bout.write(bitIdx >> 16);
-        bout.write(bitIdx >> 8);
-        bout.write(bitIdx);
-
-        for (int lidx = 0; lidx < longIdx; lidx++) {
-            long l = buffer[lidx];
-            int from = 56, to = 63;
-            for (int bidx = 0; bidx < 8; bidx++) {
-                bout.write((int) BitUtils.getBitsLow(l, from, to));
-                from -= 8;
-                to -= 8;
-            }
-        }
-
-        if (bitIdx % 64 != 0) {
-            long l = buffer[longIdx];
-            int b = 0;
-            int j = 7;
-            for (int i = (bitIdx % 64) - 1; i >= 0; i--) {
-                int bit = (int) BitUtils.valueAt(i, l);
-                b = BitUtils.setBit(j, bit, b);
-                j--;
-                if (j == -1) {
-                    bout.write(b);
-                    b = 0;
-                    j = 7;
-                }
-            }
-            if (j != 7) bout.write(b);
-        }
-        
+        writeInt(bout, bitIdx);
+        for (int iidx = 0; iidx < intIdx; iidx++) 
+            writeInt(bout, buffer[iidx]);
+        if (bitIdx % 32 != 0) 
+            writeInt(bout, buffer[intIdx]);
         bout.flush();
-        
     }
     
     public static BitBuffer read(InputStream in) throws IOException {
-        
         BufferedInputStream bin = new BufferedInputStream(in);
-        
-        int bidx = bin.read();
-        bidx = (bidx << 8) | bin.read();
-        bidx = (bidx << 8) | bin.read();
-        bidx = (bidx << 8) | bin.read();
-        
-        BitBuffer bb = new BitBuffer(bidx % 64 == 0 ? bidx >> 6 : (bidx >> 6) + 1);
+        int bidx = readInt(bin);
+        BitBuffer bb = new BitBuffer(bidx % 32 == 0 ? bidx >> 5 : (bidx >> 5) + 1);
         bb.bitIdx = bidx;
-        bb.longIdx = bidx >> 6;
-        
-        for (int i = 0; i < bb.longIdx; i++) {
-            long l = bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            l = (l << 8) | bin.read();
-            bb.buffer[i] = l;
-        }
-        if (bidx % 64 != 0) {
-            int recorded = (bidx - 1) % 8 + 1;
-            int b;
-            long l = 0;
-            while ((b = bin.read()) != -1) l = (l << 8) | b;
-            bb.buffer[bb.longIdx] = l >> 8 - recorded;
-        }
-        
+        bb.intIdx = bidx >> 5;
+        for (int iidx = 0; iidx < bb.intIdx; iidx++) 
+            bb.buffer[iidx] = readInt(bin);
+        if (bidx % 32 != 0) 
+            bb.buffer[bb.intIdx] = readInt(bin);
         return bb;
-        
+    }
+    
+    private static int readInt(InputStream in) throws IOException {
+        int i = in.read();
+        i = (i << 8) | in.read();
+        i = (i << 8) | in.read();
+        i = (i << 8) | in.read();
+        return i;
     }
 
+    private static void writeInt(OutputStream out, int i) throws IOException {
+        out.write(i >> 24);
+        out.write(i >> 16);
+        out.write(i >> 8);
+        out.write(i);
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append('[');
-        
-        for (int i = 0; i < longIdx; i++) 
+        for (int i = 0; i < intIdx; i++) 
             sb.append(BitUtils.toFullBinaryString(buffer[i]));
-        
-        for (int i = (bitIdx % 64) - 1; i >= 0; i--) 
-            sb.append(BitUtils.valueAt(i, buffer[longIdx]));
-        
+        for (int i = 31; i > 31 - (bitIdx % 32); i--) 
+            sb.append(BitUtils.valueAt(i, buffer[intIdx]));
         sb.append(']');
         return sb.toString();
     }
     
-    // stolen from: https://gist.github.com/leodutra/63ca94fe86dcffee1bab
+//  stolen from: https://gist.github.com/leodutra/63ca94fe86dcffee1bab
     private static int min(int a, int b) {
         return a - ((a - b) & ((b - a) >> 31));
+    }
+    
+    private static int max(int a, int b) {
+        return -min(-a, -b);
     }
     
 }

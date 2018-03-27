@@ -1,11 +1,8 @@
 package lib;
 
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -13,16 +10,14 @@ import java.util.TreeSet;
  *
  * @author Texhnolyze
  */
-public class Alphabet implements Comparator<String> {
+public class Alphabet {
     
     private Map<Character, Integer> indexOf;
 
     private char[] alphabet;
     private int from;
     
-    private final boolean UTF16Ordering;
-
-    private Alphabet(boolean UTF16Ordering) {this.UTF16Ordering = UTF16Ordering;}
+    private Alphabet() {}
 
     public int size() {
         return alphabet.length;
@@ -49,27 +44,32 @@ public class Alphabet implements Comparator<String> {
                 return false;
         return true;
     }
-    
+
     @Override
-    public int compare(String s1, String s2) {
-        if (UTF16Ordering) 
-            return s1.compareTo(s2);
-        else {
-            int len1 = s1.length();
-            int len2 = s2.length();
-            int lim = Math.min(len1, len2);
-            for (int i = 0; i < lim; i++) {
-                char c1 = s1.charAt(i);
-                char c2 = s2.charAt(i);
-                if (c1 != c2) 
-                    return indexOf.get(c1) - indexOf.get(c2);
-            }
-            return len1 - len2;
-        }
+    public int hashCode() {
+        int hash = 7;
+        if (indexOf == null) {
+            hash = 29 * hash + Integer.hashCode(from);
+            hash = 29 * hash + Integer.hashCode(alphabet.length);
+        } else 
+            hash = 29 * hash + indexOf.hashCode();
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        final Alphabet other = (Alphabet) obj;
+        if (other.indexOf == null) 
+            return this.from == other.from && this.alphabet.length == other.alphabet.length;
+        else 
+            return this.indexOf.equals(other.indexOf);
     }
 
     public static Alphabet fromUTF16Range(int from, int to) {
-        Alphabet a = new Alphabet(true);
+        Alphabet a = new Alphabet();
         a.from = from;
         a.alphabet = new char[from - to + 1];
         for (int i = from; i <= to; i++) 
@@ -77,27 +77,17 @@ public class Alphabet implements Comparator<String> {
         return a;
     }
 
-    public static Alphabet fromChars(char[] alphabet) {
-        boolean UTF16Ordering = true;
-        for (int i = 1; i < alphabet.length; i++) {
-            if (alphabet[i] < alphabet[i - 1]) {
-                UTF16Ordering = false;
-                break;
-            }
-        }
-        Set<Character> set = new HashSet<>();
-        for (char c : alphabet) {
-            if (!set.contains(c)) 
-                set.add(c);
-            else
-                throw new IllegalArgumentException("Char " + c + " is not unic.");
-        }
-        Alphabet a = new Alphabet(UTF16Ordering);
-        a.alphabet = alphabet;
-        a.indexOf = new HashMap<>();
-        for (int i = 0; i < alphabet.length; i++) 
-            a.indexOf.put(alphabet[i], i);
-        return a;
+    public static Alphabet fromCharArray(char[] alphabet) {
+        SortedSet<Character> set = new TreeSet<>();
+        for (char c : alphabet) 
+            set.add(c);
+        return fromSortedSet(set);
+    }
+    
+    public static Alphabet fromChars(Collection<Character> chars) {
+        SortedSet<Character> set = new TreeSet<>();
+        set.addAll(chars);
+        return fromSortedSet(set);
     }
     
     public static Alphabet fromStrings(Collection<String> strings) {
@@ -105,15 +95,19 @@ public class Alphabet implements Comparator<String> {
         for (String s : strings) 
             for (int i = 0; i < s.length(); i++)
                 set.add(s.charAt(i));
-        Alphabet a = new Alphabet(true);
-        a.alphabet = new char[set.size()];
+        return fromSortedSet(set);
+    }
+    
+    public static Alphabet fromSortedSet(SortedSet<Character> set) {
+        int index = 0;
+        char[] alphabet = new char[set.size()];
+        for (char c : set)
+            alphabet[index++] = c;
+        Alphabet a = new Alphabet();
+        a.alphabet = alphabet;
         a.indexOf = new HashMap<>();
-        int idx = 0;
-        for (char c : set) {
-            a.alphabet[idx] = c;
-            a.indexOf.put(c, idx);
-            idx++;
-        }
+        for (int i = 0; i < alphabet.length; i++) 
+            a.indexOf.put(alphabet[i], i);
         return a;
     }
     

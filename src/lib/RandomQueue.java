@@ -27,7 +27,7 @@ public class RandomQueue<E> implements Iterable<E> {
         elems = (E[]) new Object[32];
     }
     
-    public int getSize() {
+    public int size() {
         return size;
     }
 
@@ -36,15 +36,17 @@ public class RandomQueue<E> implements Iterable<E> {
     }
 
     public void add(E e) {
+        if (size == elems.length) 
+            resize(2 * elems.length);
         elems[size++] = e;
-        if (size == elems.length) resize(2 * elems.length);
     }
 
-    public E get() {
+    public E poll() {
         int idx = rnd.nextInt(size--);
         E e = elems[idx];
         elems[idx] = elems[size];
-        if (size < elems.length / 4) resize(elems.length / 2);
+        if (size < elems.length / 4) 
+            resize(elems.length / 2);
         return e;
     }
 
@@ -56,39 +58,20 @@ public class RandomQueue<E> implements Iterable<E> {
 
     @Override
     public Iterator<E> iterator() {
-
         return new Iterator<E>() {
-
-            private int idx;
-            private int[] idxs = new int[size];
-
-            {
-
-                for (int i = 0; i < size; i++) idxs[i] = i;
-
-                for (int i = 0; i < size; i++) {
-
-                    int next = i + rnd.nextInt(size - i);
-
-                    int temp = idxs[i];
-                    idxs[i] = idxs[next];
-                    idxs[next] = temp;
-
-                }
-            }
-
-            @Override
-            public boolean hasNext() {
-                return idx < idxs.length;
-            }
-
-            @Override
-            public E next() {
-                return elems[idxs[idx++]];
+            
+            private int index;
+            
+            @Override public boolean hasNext() {return index < size;}
+            @Override public E next() {
+                int j = index + rnd.nextInt(size - index);
+                E temp = elems[index];
+                elems[index] = elems[j];
+                elems[j] = temp;
+                return elems[index++];
             }
 
         };
-
     }
     
 }
