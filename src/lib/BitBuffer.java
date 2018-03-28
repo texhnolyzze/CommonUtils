@@ -1,7 +1,8 @@
 package lib;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -130,41 +131,26 @@ public class BitBuffer  {
     }
 	
     public void write(OutputStream out) throws IOException {
-        BufferedOutputStream bout = new BufferedOutputStream(out);
-        writeInt(bout, bitIdx);
+        DataOutputStream dos = new DataOutputStream(out);
+        dos.writeInt(bitIdx);
         for (int iidx = 0; iidx < intIdx; iidx++) 
-            writeInt(bout, buffer[iidx]);
+            dos.writeInt(buffer[iidx]);
         if (bitIdx % 32 != 0) 
-            writeInt(bout, buffer[intIdx]);
-        bout.flush();
+            dos.writeInt(buffer[intIdx]);
+        dos.flush();
     }
     
     public static BitBuffer read(InputStream in) throws IOException {
-        BufferedInputStream bin = new BufferedInputStream(in);
-        int bidx = readInt(bin);
+        DataInputStream dis = new DataInputStream(in);
+        int bidx = dis.readInt();
         BitBuffer bb = new BitBuffer(bidx % 32 == 0 ? bidx >> 5 : (bidx >> 5) + 1);
         bb.bitIdx = bidx;
         bb.intIdx = bidx >> 5;
         for (int iidx = 0; iidx < bb.intIdx; iidx++) 
-            bb.buffer[iidx] = readInt(bin);
+            bb.buffer[iidx] = dis.readInt();
         if (bidx % 32 != 0) 
-            bb.buffer[bb.intIdx] = readInt(bin);
+            bb.buffer[bb.intIdx] = dis.readInt();
         return bb;
-    }
-    
-    private static int readInt(InputStream in) throws IOException {
-        int i = in.read();
-        i = (i << 8) | in.read();
-        i = (i << 8) | in.read();
-        i = (i << 8) | in.read();
-        return i;
-    }
-
-    private static void writeInt(OutputStream out, int i) throws IOException {
-        out.write(i >> 24);
-        out.write(i >> 16);
-        out.write(i >> 8);
-        out.write(i);
     }
     
     @Override

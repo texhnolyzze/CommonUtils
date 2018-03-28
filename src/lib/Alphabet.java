@@ -62,10 +62,17 @@ public class Alphabet {
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
         final Alphabet other = (Alphabet) obj;
-        if (other.indexOf == null) 
-            return this.from == other.from && this.alphabet.length == other.alphabet.length;
-        else 
-            return this.indexOf.equals(other.indexOf);
+        if (this.indexOf == null) {
+            if (other.indexOf != null)
+                return false;
+            else
+                return this.from == other.from && this.alphabet.length == other.alphabet.length;
+        } else {
+            if (other.indexOf == null)
+                return false;
+            else
+                return this.indexOf.equals(other.indexOf);
+        }
     }
 
     public static Alphabet fromUTF16Range(int from, int to) {
