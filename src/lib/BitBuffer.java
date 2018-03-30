@@ -1,6 +1,5 @@
 package lib;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,6 +11,9 @@ import java.io.OutputStream;
  * @author Texhnolyze
  */
 public class BitBuffer  {
+    
+    private static final int R = 32;
+    private static final int SHIFT = 5;
     
     private int[] buffer;
     
@@ -33,26 +35,26 @@ public class BitBuffer  {
     
     
     public BitBuffer append(int bit) {
-        if ((bitIdx + 1) >> 5 == buffer.length)
+        if ((bitIdx + 1) >> SHIFT == buffer.length)
             resize(2 * buffer.length);
-        buffer[intIdx] = buffer[intIdx] | (bit << 31 - (bitIdx % 32));
-        intIdx = (++bitIdx) >> 5;
+        buffer[intIdx] = buffer[intIdx] | (bit << (R - 1) - (bitIdx % R));
+        intIdx = (++bitIdx) >> SHIFT;
         return this;
     }
     
 //  Adds n bits to the end of the buffer in order from the 
 //  least significant bit to the highest
     public BitBuffer append(int bits, int n) {
-        if (n <= 0 || n > 32) 
-            throw new IllegalArgumentException("n must be > 0 and <= 32");
-        if ((bitIdx + n) >> 5 == buffer.length) 
+        if (n <= 0 || n > R) 
+            throw new IllegalArgumentException("n must be > 0 and <= " + R);
+        if ((bitIdx + n) >> SHIFT == buffer.length) 
             resize(2 * buffer.length);
-        int bitsRec = bitIdx % 32;
-        int shift = min(n, 32 - bitsRec);
+        int bitsRec = bitIdx % R;
+        int shift = min(n, R - bitsRec);
         int r = Integer.reverse(BitUtils.getBitsLow(bits, 0, shift - 1)) >>> bitsRec;
         buffer[intIdx] = buffer[intIdx] | r;
         bitIdx += n;
-        intIdx = bitIdx >> 5;
+        intIdx = bitIdx >> SHIFT;
         if (shift != n) {
             int l = Integer.reverse(BitUtils.getBitsLow(bits, shift, n - 1));
             buffer[intIdx] = buffer[intIdx] | l;
@@ -67,9 +69,17 @@ public class BitBuffer  {
     public BitBuffer append(BitBuffer src, int frombit, int tobit) {
         if (frombit < 0 || frombit > tobit || tobit >= src.bitIdx)
             throw new IllegalArgumentException("0 <= frombit <= tobit < src.numBits()");
-        for (int i = frombit; i <= tobit; i++)
-            append(src.bitAt0(i)); 
+        int n = tobit - frombit + 1;
+        for (int iidx = frombit >> SHIFT, bitidx = (R - 1) - frombit % R;; iidx++) {
+            int record = min(n, bitidx + 1);
+            append(Integer.reverse(src.buffer[iidx]) >>> ((R - 1) - bitidx), record);
+            n -= record;
+            if (n == 0)
+                break;
+            bitidx = R - 1;
+        }
         return this;
+        
     }
     
 //  sets the number of significant bits to the sbits
@@ -79,14 +89,14 @@ public class BitBuffer  {
         if (sbits == bitIdx)
             return this;
         bitIdx = sbits;
-        intIdx = bitIdx >> 5;
+        intIdx = bitIdx >> SHIFT;
         if (intIdx + 1 < buffer.length / 4)
             resize(max(1, 2 * intIdx));
         return this;
     }
     
     public BitBuffer copy() {
-        BitBuffer copy = new BitBuffer(bitIdx % 32 == 0 ? intIdx : intIdx + 1);
+        BitBuffer copy = new BitBuffer(bitIdx % R == 0 ? intIdx : intIdx + 1);
         System.arraycopy(buffer, 0, copy.buffer, 0, copy.buffer.length);
         copy.bitIdx = bitIdx;
         copy.intIdx = intIdx;
@@ -99,15 +109,15 @@ public class BitBuffer  {
     public Pair<int[], Integer> raw() {
         int[] raw = new int[intIdx + 1];
         System.arraycopy(buffer, 0, raw, 0, intIdx);
-        if (bitIdx % 32 != 0) 
+        if (bitIdx % R != 0) 
             raw[intIdx] = buffer[intIdx];
-        return new Pair<>(raw, bitIdx % 32);
+        return new Pair<>(raw, bitIdx % R);
     }
     
     private void resize(int cap) {
         int[] b = new int[cap];
         System.arraycopy(buffer, 0, b, 0, intIdx);
-        if (bitIdx % 32 != 0) b[intIdx] = buffer[intIdx];
+        if (bitIdx % R != 0) b[intIdx] = buffer[intIdx];
         buffer = b;
     }
     
@@ -118,15 +128,15 @@ public class BitBuffer  {
     }
     
     private int bitAt0(int idx) {
-        int iidx = idx >> 5;
-        return BitUtils.valueAt(31 - (idx % 32), buffer[iidx]);
+        int iidx = idx >> SHIFT;
+        return BitUtils.valueAt((R - 1) - (idx % R), buffer[iidx]);
     }
     
     public BitBuffer setBitAt(int idx, int val) {
         if (idx >= bitIdx) 
             throw new IndexOutOfBoundsException(idx + "");
-        int iidx = idx >> 5;
-        buffer[iidx] = BitUtils.setBit(31 - (idx % 32), val, buffer[iidx]);
+        int iidx = idx >> SHIFT;
+        buffer[iidx] = BitUtils.setBit((R - 1) - (idx % R), val, buffer[iidx]);
         return this;
     }
 	
@@ -135,7 +145,7 @@ public class BitBuffer  {
         dos.writeInt(bitIdx);
         for (int iidx = 0; iidx < intIdx; iidx++) 
             dos.writeInt(buffer[iidx]);
-        if (bitIdx % 32 != 0) 
+        if (bitIdx % R != 0) 
             dos.writeInt(buffer[intIdx]);
         dos.flush();
     }
@@ -143,12 +153,12 @@ public class BitBuffer  {
     public static BitBuffer read(InputStream in) throws IOException {
         DataInputStream dis = new DataInputStream(in);
         int bidx = dis.readInt();
-        BitBuffer bb = new BitBuffer(bidx % 32 == 0 ? bidx >> 5 : (bidx >> 5) + 1);
+        BitBuffer bb = new BitBuffer(bidx % R == 0 ? bidx >> SHIFT : (bidx >> SHIFT) + 1);
         bb.bitIdx = bidx;
-        bb.intIdx = bidx >> 5;
+        bb.intIdx = bidx >> SHIFT;
         for (int iidx = 0; iidx < bb.intIdx; iidx++) 
             bb.buffer[iidx] = dis.readInt();
-        if (bidx % 32 != 0) 
+        if (bidx % R != 0) 
             bb.buffer[bb.intIdx] = dis.readInt();
         return bb;
     }
@@ -159,7 +169,7 @@ public class BitBuffer  {
         sb.append('[');
         for (int i = 0; i < intIdx; i++) 
             sb.append(BitUtils.toFullBinaryString(buffer[i]));
-        for (int i = 31; i > 31 - (bitIdx % 32); i--) 
+        for (int i = R - 1; i > (R - 1) - (bitIdx % R); i--) 
             sb.append(BitUtils.valueAt(i, buffer[intIdx]));
         sb.append(']');
         return sb.toString();
