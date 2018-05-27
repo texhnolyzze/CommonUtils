@@ -120,8 +120,10 @@ public class UFS<E> {
         E newRepresentative = childs.remove((int) (Math.random() * childs.size()));
         parentOf.put(newRepresentative, newRepresentative);
         sizeOf.put(newRepresentative, sizeOf.remove(e) - 1);
-        for (E child : childs) 
+        for (E child : childs) {
+            sizeOf.put(child, 1);
             parentOf.put(child, newRepresentative);
+        }
     }
 
     private void removeInnerNode(E e, E parent) {
@@ -129,8 +131,10 @@ public class UFS<E> {
         List<E> childs = getChildsOf(e);
         sizeOf.remove(e);
         parentOf.remove(e);
-        for (E child : childs)
+        for (E child : childs) {
+            sizeOf.put(child, 1);
             parentOf.put(child, parent);
+        }
     }
     
     private List<E> getChildsOf(E e) {
@@ -148,9 +152,10 @@ public class UFS<E> {
     }
     
     private void decreaseSize(E parent) {
+        E temp = parent;
         do {
-            sizeOf.put(parent, sizeOf.get(parent) - 1);
-            E temp = parentOf.get(parent); 
+            sizeOf.put(temp, sizeOf.get(temp) - 1);
+            temp = parentOf.get(temp); 
             if (temp == parent)
                 break;
         } while (true);
