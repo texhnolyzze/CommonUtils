@@ -27,6 +27,10 @@ public class UFS<E> {
         sizeOf.clear();
         n = 0;
     }
+    
+    public boolean contains(E e) {
+        return parentOf.get(e) != null;
+    }
 
     public int numOfSets() {
         return n;
@@ -70,7 +74,7 @@ public class UFS<E> {
             return null;
         while (temp1 != temp2) {
             temp1 = temp2;
-            temp2 = parentOf.get(temp1);
+            temp2 = parentOf.get(temp2);
         }
         E representative = temp1;
         temp1 = e;
@@ -81,7 +85,7 @@ public class UFS<E> {
             parentOf.put(temp1, representative);
             sizeOf.put(temp2, sizeOf.get(temp2) - n);
             temp1 = temp2;
-            temp2 = parentOf.get(temp1);
+            temp2 = parentOf.get(temp2);
         }
         return representative;
     }
