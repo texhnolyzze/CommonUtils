@@ -3,19 +3,22 @@ package lib;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 /**
  *
  * @author Texhnolyze
  */
-public class ImageHash {
+public class PHash {
     
     private BitBuffer hash;
     
     private BufferedImage mask;
     private final BufferedImage img;
     
-    public ImageHash(BufferedImage img) {
+    public PHash(BufferedImage img) {
         this.img = img;
     }
 
@@ -35,11 +38,12 @@ public class ImageHash {
         return hash;
     }
     
-    public int hammingDistance(ImageHash other) {
+    public int hammingDistance(PHash other) {
         return BitUtils.hammingDistance(hash(), other.hash());
     }
     
-    private static final int SCALE_SIZE = 8;
+    private static final int SCALE_SIZE = 32;
+    private static final int HALF_HALF_SCALE_SIZE = SCALE_SIZE / 4;
     
     private BufferedImage scale() {
         BufferedImage scaled = new BufferedImage(SCALE_SIZE, SCALE_SIZE, BufferedImage.TYPE_INT_RGB);
@@ -50,33 +54,60 @@ public class ImageHash {
     }
     
     private void toGrayscale(BufferedImage img) {
-        for (int x = 0; x < img.getWidth(); x++) {
-            for (int y = 0; y < img.getHeight(); y++) {
+        for (int x = 0; x < SCALE_SIZE; x++) {
+            for (int y = 0; y < SCALE_SIZE; y++) {
                 int rgb = img.getRGB(x, y);
                 int b = rgb & 0xff;
                 int g = (rgb & 0xff00) >> 8;
                 int r = (rgb & 0xff0000) >> 16;
                 int grayByte = toGrayByteValue(r, g, b);
-                int color = (((grayByte << 8) | grayByte) << 8) | grayByte;
-                img.setRGB(x, y, color);
+                img.setRGB(x, y, grayByte);
             }
         }
+    }
+    
+    private BufferedImage dct(BufferedImage src) {
+        BufferedImage dct = new BufferedImage(SCALE_SIZE, SCALE_SIZE, BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < SCALE_SIZE; x++) {
+            for (int y = 0; y < SCALE_SIZE; y++) {
+                dct.setRGB(x, y, dct0(src, x, y));
+            }
+        }
+        return dct;
+    }
+    
+    private int dct0(BufferedImage img, int x, int y) {
+        double cx = x == 0 ? Math.sqrt(1.0 / SCALE_SIZE) : Math.sqrt(2.0 / SCALE_SIZE);
+        double cy = y == 0 ? Math.sqrt(1.0 / SCALE_SIZE) : Math.sqrt(2.0 / SCALE_SIZE);
+        double d = 0.0;
+        for (int k = 0; k < SCALE_SIZE; k++) {
+            double s = 0.0;
+            for (int l = 0; l < SCALE_SIZE; l++) {
+                int c = img.getRGB(k, l) & 0xff;
+                double ck = Math.cos(((2.0 * k + 1.0) * x * Math.PI) / (2.0 * SCALE_SIZE));
+                double cl = Math.cos(((2.0 * l + 1.0) * y * Math.PI) / (2.0 * SCALE_SIZE));
+                s += (c * ck * cl);
+            }
+            d += s;
+        }
+        return (int) (cx * cy * d);
     }
     
     private int calculateAVGColor(BufferedImage img) {
         int avg = 0;
-        for (int x = 0; x < SCALE_SIZE; x++) {
-            for (int y = 0; y < SCALE_SIZE; y++) {
+        for (int x = 0; x < HALF_HALF_SCALE_SIZE; x++) {
+            for (int y = 0; y < HALF_HALF_SCALE_SIZE; y++) {
                 avg += (img.getRGB(x, y) & 0xff);
             }
         }
-        return (avg / (SCALE_SIZE * SCALE_SIZE));
+        avg -= (img.getRGB(0, 0) & 0xff);
+        return (avg / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE));
     }
     
     private BitBuffer buildBitsChain(BufferedImage img, int avg) {
-        BitBuffer bb = new BitBuffer((SCALE_SIZE * SCALE_SIZE) / BitBuffer.R);
-        for (int x = 0; x < SCALE_SIZE; x++) {
-            for (int y = 0; y < SCALE_SIZE; y++) {
+        BitBuffer bb = new BitBuffer((HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE) / BitBuffer.R);
+        for (int x = 0; x < HALF_HALF_SCALE_SIZE; x++) {
+            for (int y = 0; y < HALF_HALF_SCALE_SIZE; y++) {
                 if ((img.getRGB(x, y) & 0xff) > avg) {
                     bb.append(1);
                     img.setRGB(x, y, Color.BLACK.getRGB());
@@ -90,8 +121,10 @@ public class ImageHash {
     }
     
     private BitBuffer calculateHash() {
-        mask = scale();
-        toGrayscale(mask);
+        BufferedImage scaled = scale();
+        toGrayscale(scaled);
+        BufferedImage dct = dct(scaled);
+        mask = dct.getSubimage(0, 0, HALF_HALF_SCALE_SIZE, HALF_HALF_SCALE_SIZE);
         int avg = calculateAVGColor(mask);
         return buildBitsChain(mask, avg);
     }
@@ -118,8 +151,8 @@ public class ImageHash {
         return (int) (UNIT_GRAY_VECTOR_COMPONENT * len);
     }
     
-    public static double getSimilarityPercentage(ImageHash h1, ImageHash h2) {
-        double d = (double) h1.hammingDistance(h2) / (SCALE_SIZE * SCALE_SIZE);
+    public static double getSimilarityPercentage(PHash h1, PHash h2) {
+        double d = (double) h1.hammingDistance(h2) / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE);
         return 1.0 - d;
     }
     
