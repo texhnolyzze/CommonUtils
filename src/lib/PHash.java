@@ -3,6 +3,9 @@ package lib;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 /**
  *
@@ -91,14 +94,13 @@ public class PHash {
     }
     
     private int calculateAVGColor(BufferedImage img) {
-        int avg = 0;
+        int avg = -img.getRGB(0, 0) & 0xff;
         for (int x = 0; x < HALF_HALF_SCALE_SIZE; x++) {
             for (int y = 0; y < HALF_HALF_SCALE_SIZE; y++) {
                 avg += (img.getRGB(x, y) & 0xff);
             }
         }
-        avg -= (img.getRGB(0, 0) & 0xff);
-        return (avg / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE));
+        return avg / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE);
     }
     
     private BitBuffer buildBitsChain(BufferedImage img, int avg) {
@@ -141,7 +143,7 @@ public class PHash {
         int z = -b;
         int i = y - z;
         int j = z - x;
-        int k = x - y; // (i, j, k) is the cross product: (r, g, b) x (1, 1, 1)
+        int k = x - y; // (i, j, k) is the cross product: (-r, -g, -b) x (1, 1, 1)
         double crossLen = Math.sqrt(i * i + j * j + k * k);
         double distFromGrayLine = crossLen / GRAY_VECTOR_LEN;
         double len = Math.sqrt(rgbLenSqr - distFromGrayLine * distFromGrayLine);
@@ -149,7 +151,7 @@ public class PHash {
     }
     
     public static double getSimilarityPercentage(PHash p1, PHash p2) {
-        double d = (double) p1.hammingDistance(p2) / (SCALE_SIZE * SCALE_SIZE);
+        double d = (double) p1.hammingDistance(p2) / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE);
         return 1.0 - d;
     }
     
