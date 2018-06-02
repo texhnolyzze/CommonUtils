@@ -122,8 +122,6 @@ public class PHash {
         toGrayscale(scaled);
         BufferedImage dct = dct(scaled);
         mask = dct.getSubimage(0, 0, HALF_HALF_SCALE_SIZE, HALF_HALF_SCALE_SIZE);
-        mask = scale();
-        toGrayscale(mask);
         int avg = calculateAVGColor(mask);
         return buildBitsChain(mask, avg);
     }
