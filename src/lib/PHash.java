@@ -3,9 +3,6 @@ package lib;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
 
 /**
  *
@@ -125,6 +122,8 @@ public class PHash {
         toGrayscale(scaled);
         BufferedImage dct = dct(scaled);
         mask = dct.getSubimage(0, 0, HALF_HALF_SCALE_SIZE, HALF_HALF_SCALE_SIZE);
+        mask = scale();
+        toGrayscale(mask);
         int avg = calculateAVGColor(mask);
         return buildBitsChain(mask, avg);
     }
@@ -151,8 +150,8 @@ public class PHash {
         return (int) (UNIT_GRAY_VECTOR_COMPONENT * len);
     }
     
-    public static double getSimilarityPercentage(PHash h1, PHash h2) {
-        double d = (double) h1.hammingDistance(h2) / (HALF_HALF_SCALE_SIZE * HALF_HALF_SCALE_SIZE);
+    public static double getSimilarityPercentage(PHash p1, PHash p2) {
+        double d = (double) p1.hammingDistance(p2) / (SCALE_SIZE * SCALE_SIZE);
         return 1.0 - d;
     }
     
