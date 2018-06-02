@@ -33,7 +33,7 @@ public class TickOscillator {
         }
     }
     
-    public void reset(int freq) {
+    public final void reset(int freq) {
         this.freq = freq;
         ticksPassed = 0;
         increment = true;

@@ -12,7 +12,7 @@ import java.io.OutputStream;
  */
 public class BitBuffer  {
     
-    private static final int R = 32;
+    public static final int R = 32;
     private static final int SHIFT = 5;
     
     private int[] buffer;
@@ -21,7 +21,7 @@ public class BitBuffer  {
     private int intIdx;
     
     public BitBuffer() {this(4);}
-    public BitBuffer(int initCap) {buffer = new int[initCap];}
+    public BitBuffer(int initCap) {buffer = new int[max(1, initCap)];}
     
     //returns the number of significant bits
     public int numBits() {

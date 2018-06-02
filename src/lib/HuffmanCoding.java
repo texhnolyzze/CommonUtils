@@ -78,9 +78,9 @@ public final class HuffmanCoding {
             }
         }
         
-        BitBuffer[] codingTable() {
+        private BitBuffer[] codingTable() {
             if (codingTable == null) {
-                codingTable = new BitBuffer[alphabet.size()];
+                codingTable = new BitBuffer[alphabet().size()];
                 buildTable(codingTable, new BitBuffer(1), root);
             }
             return codingTable;

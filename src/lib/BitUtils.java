@@ -80,4 +80,30 @@ public class BitUtils {
         return sb.toString();
     }
     
+    public static int hammingDistance(int h1, int h2) {
+        int distance = 0;
+        for (int i = 0; i < 32; i++)
+            if (valueAt(i, h1) != valueAt(i, h2))
+                distance++;
+        return distance;
+    }
+    
+    public static int hammingDistance(long h1, long h2) {
+        int distance = 0;
+        for (int i = 0; i < 64; i++)
+            if (valueAt(i, h1) != valueAt(i, h2))
+                distance++;
+        return distance;
+    }
+    
+    public static int hammingDistance(BitBuffer h1, BitBuffer h2) {
+        if (h1.numBits() != h2.numBits())
+            throw new IllegalArgumentException("h1.numBits() must be equal to h2.numBits()");
+        int distance = 0;
+        for (int i = 0; i < h1.numBits(); i++)
+            if (h1.bitAt(i) != h2.bitAt(i))
+                distance++;
+        return distance;
+    }
+    
 }
