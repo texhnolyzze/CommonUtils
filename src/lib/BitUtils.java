@@ -81,18 +81,22 @@ public class BitUtils {
     }
     
     public static int hammingDistance(int h1, int h2) {
+        int i = h1 ^ h2;
         int distance = 0;
-        for (int i = 0; i < 32; i++)
-            if (valueAt(i, h1) != valueAt(i, h2))
-                distance++;
+        while (i != 0) {
+            distance += (i & 1);
+            i = i >>> 1;
+        }
         return distance;
     }
     
     public static int hammingDistance(long h1, long h2) {
+        long i = h1 ^ h2;
         int distance = 0;
-        for (int i = 0; i < 64; i++)
-            if (valueAt(i, h1) != valueAt(i, h2))
-                distance++;
+        while (i != 0) {
+            distance += (i & 1);
+            i = i >>> 1;
+        }
         return distance;
     }
     

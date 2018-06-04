@@ -6,11 +6,14 @@ import java.util.Objects;
  *
  * @author Texhnolyze
  */
-public abstract class Pool<E> {
+public class Pool<E> {
     
+    private final Pool.Factory<E> factory;
     private final Stack<E> pool = new Stack<>();
-    
-    protected abstract E _new();
+
+    public Pool(Pool.Factory<E> factory) {
+        this.factory = factory;
+    }
     
     public int size() {
         return pool.size();
@@ -21,11 +24,17 @@ public abstract class Pool<E> {
     }
     
     public E obtain() {
-        return pool.isEmpty() ? _new() : pool.pop();
+        return pool.isEmpty() ? factory._new() : pool.pop();
     }
     
     public void free(E e) {
+        factory.reset(e);
         pool.push(Objects.requireNonNull(e));
+    }
+    
+    public interface Factory<E> {
+        E _new();
+        default void reset(E e) {} // empty by default
     }
     
 }
