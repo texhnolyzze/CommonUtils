@@ -7,10 +7,9 @@ import java.net.Proxy.Type;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -26,7 +25,7 @@ public class ProxyExtractor {
     
 //  Available protocols are HTTP, HTTPS, SOCKS4, SOCKS5
     
-    private final Set<ExtractedProxy> proxies = new HashSet<>();
+    private final LinkedHashSet<ExtractedProxy> proxies = new LinkedHashSet<>();
     
 //  https query parameters. you can find them on http://proxydb.net/
     private final Map<String, String> params;
@@ -34,7 +33,7 @@ public class ProxyExtractor {
     private int offset;
     
     public ProxyExtractor() {
-        this(Collections.EMPTY_MAP);
+        this(new HashMap());
     }
     
     public ProxyExtractor(Map<String, String> params) {
@@ -58,7 +57,7 @@ public class ProxyExtractor {
         proxies.clear();
     }
     
-    public Set<ExtractedProxy> getExtractedProxies() {
+    public LinkedHashSet<ExtractedProxy> getExtractedProxies() {
         return proxies;
     }
     
@@ -105,7 +104,7 @@ public class ProxyExtractor {
             m.put("checked", checked);
             
             String script = row.children().first().children().first().html();
-            String[] proxyString = decipher(script);
+            String[] proxyString = decipher(script, doc);
 
             Type type = host.equals("HTTP") || host.equals("HTTPS") ? Type.HTTP : Type.SOCKS;
             
@@ -131,19 +130,22 @@ public class ProxyExtractor {
     
     private static final Pattern PART1 = Pattern.compile("([0-9]+)?\\.?([0-9]+\\.)+[0-9]+");
     private static final Pattern PART2 = Pattern.compile("(\\\\x[0-9][0-9a-f])+");
-    private static final Pattern PART3 = Pattern.compile("-?[0-9]+\\s(\\+|-)\\s[0-9]+");
+    private static final Pattern INT_NUM = Pattern.compile("-?[0-9]+");
     
-    private static String[] decipher(String script) {
-        
+    
+    private static String[] decipher(String script, Document doc) {
+        script = script.replaceAll("\\s", "");
+        script = script.replaceAll("\\/\\*\\*\\/", "");
         StringBuilder sb = new StringBuilder();
         
         Matcher p1 = PART1.matcher(script), 
                 p2 = PART2.matcher(script), 
-                p3 = PART3.matcher(script);
+                p3 = INT_NUM.matcher(script);
         
         p1.find();
         sb.append(script.substring(p1.start(), p1.end())).reverse();
 
+        
         p2.find(p1.end());
         String temp = script.substring(p2.start(), p2.end());
         String[] split = temp.split("\\\\x");
@@ -151,31 +153,22 @@ public class ProxyExtractor {
         
         for (int i = 1; i < split.length; i++) {
             int n = Integer.parseInt(split[i], 16);
-            base64 += Character.toChars(n);
+            base64 += String.valueOf(Character.toChars(n));
         }
         
-        sb.append(decode(base64));
+        sb.append(new String(Base64.getDecoder().decode(base64)));
         
-        p3.find(p2.end());
-        temp = script.substring(p3.start(), p3.end());
-        split = temp.split("\\s");
+        p3.find(script.indexOf("var", p2.end()));
+        int port = Integer.parseInt(script.substring(p3.start(), p3.end()));
         
-        int l = Integer.parseInt(split[0]);
-        int r = Integer.parseInt(split[2]);
-        
-        int port = -1;
-        
-        if (split[1].equals("+")) port = l + r;
-        else if (split[1].equals("-")) port = l - r;
+        int i = script.indexOf("getAttribute('", p3.end());
+        int j = script.indexOf("')", i);
+        String attr = script.substring(i + "getAttribute('".length(), j);
+        port += Integer.parseInt(doc.getElementsByAttribute(attr).first().attr(attr));        
         
         sb.append(":").append(port);
-        
         return sb.toString().split(":");
         
-    }
-    
-    private static String decode(String s) {
-        return new String(Base64.getDecoder().decode(s));
     }
     
     public static class ExtractedProxy {

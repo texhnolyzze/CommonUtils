@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import static lib.MathUtils.*;
 
 /**
  *
@@ -173,15 +174,6 @@ public class BitBuffer  {
             sb.append(BitUtils.valueAt(i, buffer[intIdx]));
         sb.append(']');
         return sb.toString();
-    }
-    
-//  stolen from: https://gist.github.com/leodutra/63ca94fe86dcffee1bab
-    private static int min(int a, int b) {
-        return a - ((a - b) & ((b - a) >> 31));
-    }
-    
-    private static int max(int a, int b) {
-        return -min(-a, -b);
     }
     
 }

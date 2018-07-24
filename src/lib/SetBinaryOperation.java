@@ -49,9 +49,10 @@ public enum SetBinaryOperation {
 
         @Override
         boolean add(Set a, Set b, Object obj) {
-            if (a.contains(obj)) return false;
-            if (b.contains(obj)) return false;
-            return a.add(obj);
+			if (a.contains(obj) || b.contains(obj)) 
+				return false;
+			a.add(obj);
+			return true;
         }
 
         @Override
@@ -239,8 +240,8 @@ public enum SetBinaryOperation {
     abstract void toArray0(Set a, Set b, Object[] dest);
     abstract Object next(Set a, Set b, Iterator ait, Iterator bit);
     
-    Object[] toArray(Set a, Set b) {
-        Object[] arr = new Object[size(a, b)];
+    Object[] toArray(Set a, Set b, int size) {
+        Object[] arr = new Object[size];
         toArray0(a, b, arr);
         return arr;
     }
@@ -349,7 +350,7 @@ public enum SetBinaryOperation {
 
         @Override
         public Object[] toArray() {
-            return op.toArray(a, b);
+            return op.toArray(a, b, size);
         }
 
         @Override 

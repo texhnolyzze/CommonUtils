@@ -51,7 +51,7 @@ public class KnapsackProblemSolver {
         
     }
     
-    public interface Item extends Comparable<Item> {
+    public static interface Item extends Comparable<Item> {
         
         double value();
         double weight();

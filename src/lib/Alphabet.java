@@ -1,7 +1,9 @@
 package lib;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -10,7 +12,9 @@ import java.util.TreeSet;
  *
  * @author Texhnolyze
  */
-public class Alphabet {
+public class Alphabet implements Iterable<Character> {
+    
+    public static final Alphabet RUS = fromUTF16Range(1040, 1103);
     
     private Map<Character, Integer> indexOf;
 
@@ -75,10 +79,27 @@ public class Alphabet {
         }
     }
 
+    @Override
+    public String toString() {
+        return Arrays.toString(alphabet);
+    }
+
+    @Override
+    public Iterator<Character> iterator() {
+        return new Iterator<Character>() {
+            
+            int i = 0;
+            
+            @Override public boolean hasNext() {return i < alphabet.length;}
+            @Override public Character next() {return alphabet[i++];}
+        
+        };
+    }
+
     public static Alphabet fromUTF16Range(int from, int to) {
         Alphabet a = new Alphabet();
         a.from = from;
-        a.alphabet = new char[from - to + 1];
+        a.alphabet = new char[to - from + 1];
         for (int i = from; i <= to; i++) 
             a.alphabet[i - from] = (char) i;
         return a;
@@ -105,6 +126,13 @@ public class Alphabet {
         return fromSortedSet(set);
     }
     
+    public static Alphabet fromString(String s) {
+        SortedSet<Character> set = new TreeSet<>();
+        for (int i = 0; i < s.length(); i++)
+            set.add(s.charAt(i));
+        return fromSortedSet(set);
+    }
+    
     public static Alphabet fromSortedSet(SortedSet<Character> set) {
         int index = 0;
         char[] alphabet = new char[set.size()];
@@ -112,7 +140,7 @@ public class Alphabet {
             alphabet[index++] = c;
         Alphabet a = new Alphabet();
         a.alphabet = alphabet;
-        a.indexOf = new HashMap<>();
+        a.indexOf = new HashMap<>(alphabet.length);
         for (int i = 0; i < alphabet.length; i++) 
             a.indexOf.put(alphabet[i], i);
         return a;
