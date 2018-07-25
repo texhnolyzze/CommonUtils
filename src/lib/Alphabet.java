@@ -59,7 +59,7 @@ public class Alphabet implements Iterable<Character> {
             hash = 29 * hash + Integer.hashCode(from);
             hash = 29 * hash + Integer.hashCode(alphabet.chars.length);
         } else
-            hash = 29 * hash + Arrays.hashCode(alphabet.chars);
+            hash = 29 * hash + alphabet.hashCode();
         return hash;
     }
 
