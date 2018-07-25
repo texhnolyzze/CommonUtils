@@ -184,22 +184,19 @@ public final class StringUtils {
         if (prefixFunction == null)
             prefixFunction = prefixFunction(pattern);
         int[] p = prefixFunction;
-        for (int i = from, j = 0; i < to;) {
+        int i = from, j = 0;
+        while (i <= to && j < m) {
             if (s.charAt(i) == pattern.charAt(j)) {
                 i++;
                 j++;
-                while (i < n && j < m && s.charAt(i) == pattern.charAt(j)) {
-                    i++;
-                    j++;
-                }
-                if (j == m)
-                    return i - m;
-                else 
+            } else {
+                if (j != 0)
                     j = p[j - 1];
-            } else 
-                i++;
+                else 
+                    i++;
+            }
         }
-        return -1;
+        return j == m ? i - m : -1;
     }
     
     public static String normalize(String s) {
