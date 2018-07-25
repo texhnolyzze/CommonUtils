@@ -61,9 +61,14 @@ public final class StringUtils {
     }
     
     public static void main(String[] args) {
-        System.out.println(indexOfKMP("ABC ABCDAB ABCDABCDABDE", "A", null));
+        String pat = "ABCDABD";
+        String s = "ABC ABCDAB ABCDABCDABDE";
+        System.out.println(indexOfRabinCarp(s, pat));
+        System.out.println(indexOfKMP(s, pat, null));
+        System.out.println(indexOfFSM(s, pat, null));
     }
     
+//  Cache for effective substring search by Knuth-Morris-Pratt(KMP) algorithm
     public static int[] prefixFunction(String s) {
         int[] p = new int[s.length()];
         p[0] = 0;
@@ -81,12 +86,12 @@ public final class StringUtils {
         return p;
     }
     
-    public static class KMPStateMachine {
+    public static class StateMachine {
         
         private final int[] fsm;
         private final Alphabet alphabet;
         
-        private KMPStateMachine(int[] fsm, Alphabet alphabet) {
+        private StateMachine(int[] fsm, Alphabet alphabet) {
             this.fsm = fsm;
             this.alphabet = alphabet;
         }
@@ -95,8 +100,24 @@ public final class StringUtils {
             return alphabet;
         }
         
-//      Cache for effective substring search by the Knuth–Morris–Pratt algorithm
-        public static final KMPStateMachine build(String pattern) {
+        public String getPattern() {
+            StringBuilder sb = new StringBuilder();
+            int m = fsm.length / alphabet.size();
+            for (int i = 0; i < m; i++) {
+                int j = 0;
+                for (char c : alphabet) {
+                    if (fsm[to2DArrayHash(i, j, m)] == i + 1) {
+                        sb.append(c);
+                        break;
+                    }
+                    j++;
+                }
+            }
+            return sb.toString();
+        }
+        
+//      Cache for effective substring search by FSM algorithm
+        public static final StateMachine build(String pattern) {
             int m = pattern.length();
             Alphabet alphabet = Alphabet.fromString(pattern);
             int[] fsm = new int[m * alphabet.size()];
@@ -111,29 +132,29 @@ public final class StringUtils {
                         fsm[to2DArrayHash(i, c_idx, m)] = fsm[to2DArrayHash(p[i - 1], c_idx, m)];
                 }
             }
-            return new KMPStateMachine(fsm, alphabet);
+            return new StateMachine(fsm, alphabet);
         }
         
     }
     
-    public static int indexOfKMP(String s, String pattern, KMPStateMachine fsm) {
-        return indexOfKMP(s, pattern, 0, s.length() - 1, fsm);
+    public static int indexOfFSM(String s, String pattern, StateMachine fsm) {
+        return indexOfFSM(s, pattern, 0, s.length() - 1, fsm);
     }
     
-    public static int indexOfKMP(String s, String pattern, int from, KMPStateMachine fsm) {
-        return indexOfKMP(s, pattern, from, s.length() - 1, fsm);
+    public static int indexOfFSM(String s, String pattern, int from, StateMachine fsm) {
+        return indexOfFSM(s, pattern, from, s.length() - 1, fsm);
     }
     
-    public static int indexOfKMP(String s, String pattern, int from, int to, KMPStateMachine fsm) {
-        if (fsm == null) 
-            fsm = KMPStateMachine.build(pattern);
+    public static int indexOfFSM(String s, String pattern, int from, int to, StateMachine fsm) {
         int n = to - from + 1, m = pattern.length();
         if (n == 0 || n < m)
             return -1;
         if (m == 0)
             return from;
+        if (fsm == null) 
+            fsm = StateMachine.build(pattern);
         int state = 0;
-        for (int i = from; i < from + n; i++) {
+        for (int i = from; i <= to; i++) {
             int index = fsm.alphabet.indexOf(s.charAt(i));
             if (index == -1)
                 state = 0;
@@ -142,6 +163,41 @@ public final class StringUtils {
                 if (state == m)
                     return i - m + 1;
             }
+        }
+        return -1;
+    }
+    
+    public static int indexOfKMP(String s, String pattern, int[] prefixFunction) {
+        return indexOfKMP(s, pattern, prefixFunction, 0, s.length() - 1);        
+    }
+    
+    public static int indexOfKMP(String s, String pattern, int[] prefixFunction, int from) {
+        return indexOfKMP(s, pattern, prefixFunction, from, s.length() - 1);
+    }
+    
+    public static int indexOfKMP(String s, String pattern, int[] prefixFunction, int from, int to) {
+        int n = to - from + 1, m = pattern.length();
+        if (n == 0 || n < m)
+            return -1;
+        if (m == 0)
+            return from;
+        if (prefixFunction == null)
+            prefixFunction = prefixFunction(pattern);
+        int[] p = prefixFunction;
+        for (int i = from, j = 0; i < to;) {
+            if (s.charAt(i) == pattern.charAt(j)) {
+                i++;
+                j++;
+                while (i < n && j < m && s.charAt(i) == pattern.charAt(j)) {
+                    i++;
+                    j++;
+                }
+                if (j == m)
+                    return i - m;
+                else 
+                    j = p[j - 1];
+            } else 
+                i++;
         }
         return -1;
     }
