@@ -14,28 +14,31 @@ import java.util.TreeSet;
  */
 public class Alphabet implements Iterable<Character> {
     
+    private static final Map<CharArray, Alphabet> ALL = new HashMap<>();
+    private static final Map<Pair<Integer, Integer>, Alphabet> ALL_UTF16 = new HashMap<>();
+    
     public static final Alphabet RUS = fromUTF16Range(1040, 1103);
     
     private Map<Character, Integer> indexOf;
 
-    private char[] alphabet;
+    private CharArray alphabet;
     private int from;
     
     private Alphabet() {}
 
     public int size() {
-        return alphabet.length;
+        return alphabet.chars.length;
     }
 
     public char charBy(int index) {
-        return alphabet[index];
+        return alphabet.chars[index];
     }
 
     public int indexOf(char c) {
         if (indexOf != null) 
             return indexOf.getOrDefault(c, -1);
         else 
-            return c - from < 0 ? -1 : c > from + alphabet.length - 1 ? -1 : c - from;
+            return c - from < 0 ? -1 : c > from + alphabet.chars.length - 1 ? -1 : c - from;
     }
 
     public boolean contains(char c) {
@@ -54,9 +57,9 @@ public class Alphabet implements Iterable<Character> {
         int hash = 7;
         if (indexOf == null) {
             hash = 29 * hash + Integer.hashCode(from);
-            hash = 29 * hash + Integer.hashCode(alphabet.length);
-        } else 
-            hash = 29 * hash + indexOf.hashCode();
+            hash = 29 * hash + Integer.hashCode(alphabet.chars.length);
+        } else
+            hash = 29 * hash + Arrays.hashCode(alphabet.chars);
         return hash;
     }
 
@@ -70,18 +73,18 @@ public class Alphabet implements Iterable<Character> {
             if (other.indexOf != null)
                 return false;
             else
-                return this.from == other.from && this.alphabet.length == other.alphabet.length;
+                return this.from == other.from && this.alphabet.chars.length == other.alphabet.chars.length;
         } else {
             if (other.indexOf == null)
                 return false;
             else
-                return this.indexOf.equals(other.indexOf);
+                return Arrays.equals(alphabet.chars, other.alphabet.chars);
         }
     }
 
     @Override
     public String toString() {
-        return Arrays.toString(alphabet);
+        return Arrays.toString(alphabet.chars);
     }
 
     @Override
@@ -90,18 +93,23 @@ public class Alphabet implements Iterable<Character> {
             
             int i = 0;
             
-            @Override public boolean hasNext() {return i < alphabet.length;}
-            @Override public Character next() {return alphabet[i++];}
+            @Override public boolean hasNext() {return i < alphabet.chars.length;}
+            @Override public Character next() {return alphabet.chars[i++];}
         
         };
     }
 
     public static Alphabet fromUTF16Range(int from, int to) {
+        Pair<Integer, Integer> key = new Pair<>(from, to);
+        Alphabet cached = ALL_UTF16.get(key);
+        if (cached != null)
+            return cached;
         Alphabet a = new Alphabet();
         a.from = from;
-        a.alphabet = new char[to - from + 1];
+        a.alphabet = new CharArray(new char[to - from + 1]);
         for (int i = from; i <= to; i++) 
-            a.alphabet[i - from] = (char) i;
+            a.alphabet.chars[i - from] = (char) i;
+        ALL_UTF16.put(key, a);
         return a;
     }
 
@@ -138,12 +146,39 @@ public class Alphabet implements Iterable<Character> {
         char[] alphabet = new char[set.size()];
         for (char c : set)
             alphabet[index++] = c;
+        Alphabet cached = ALL.get(new CharArray(alphabet));
+        if (cached != null)
+            return cached;
         Alphabet a = new Alphabet();
-        a.alphabet = alphabet;
+        a.alphabet = new CharArray(alphabet);
         a.indexOf = new HashMap<>(alphabet.length);
         for (int i = 0; i < alphabet.length; i++) 
             a.indexOf.put(alphabet[i], i);
+        ALL.put(a.alphabet, a);
         return a;
+    }
+    
+    private static class CharArray {
+        
+        final char[] chars;
+        int hashCode;
+        boolean hashCodeCalc;
+        
+        CharArray(char[] chars) {this.chars = chars;}
+
+        @Override
+        public boolean equals(Object obj) {
+            return Arrays.equals(chars, ((CharArray) obj).chars);
+        }
+
+        @Override
+        public int hashCode() {
+            if (hashCodeCalc)
+                return hashCode;
+            hashCode = Arrays.hashCode(chars);
+            return hashCode;
+        }
+        
     }
     
 }
