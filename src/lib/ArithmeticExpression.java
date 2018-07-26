@@ -1,6 +1,8 @@
 package lib;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,13 +13,24 @@ import java.util.regex.Pattern;
  *
  * @author Texhnolyze
  */
-public class ArithmeticExpression {
+public final class ArithmeticExpression {
 
+//  add some common functions
+    static {
+        Function.newFunction("sqrt", (vals) -> {return Math.sqrt(vals[0]);}, 1);
+        Function.newFunction("sin", (vals) -> {return Math.sin(vals[0]);}, 1);
+        Function.newFunction("cos", (vals) -> {return Math.cos(vals[0]);}, 1);   
+        Function.newFunction("tan", (vals) -> {return Math.tan(vals[0]);}, 1);
+        Function.newFunction("ln", (vals) -> {return Math.log(vals[0]);}, 1);
+        Function.newFunction("lg", (vals) -> {return Math.log10(vals[0]);}, 1);
+        Function.newFunction("log", (vals) -> {return MathUtils.log(vals[0], vals[1]);}, 2);
+    }
+    
     private Node root;
     private final Map<String, OperandNode> vars = new HashMap<>();
     
-    public boolean contains(String variable) {
-        return vars.containsKey(variable);
+    public boolean contains(String var) {
+        return vars.containsKey(var);
     }
     
     public double getVariableValue(String var) {
@@ -36,93 +49,54 @@ public class ArithmeticExpression {
             throw new IllegalArgumentException("There is no variable named " + var + ".");
     }
     
-    public double compute() {
-        return compute(root);
+    public double eval() {
+        return eval(root);
     }
-    
-    private double compute(Node n) {
-        if (n.getClass() == OperandNode.class)
-            return ((OperandNode) n).val;
-        else {
-            OperationNode op = (OperationNode) n;
-            double[] vals = new double[op.operands.length];
-            for (int i = 0; i < vals.length; i++) vals[i] = compute(op.operands[i]);
-            return op.func.compute(vals);
+
+    private double eval(Node n) {
+        switch (n.getClass().getSimpleName()) {
+            case "OperandNode":
+                return ((OperandNode) n).val;
+            case "OperatorNode":
+                OperatorNode op_node = (OperatorNode) n;
+                for (int i = 0; i < op_node.childs.length; i++) 
+                    op_node.temp_vals[i] = eval(op_node.childs[i]);
+                return op_node.operator.apply(op_node.temp_vals);
+            case "FunctionNode":
+                FunctionNode func_node = (FunctionNode) n;
+                for (int i = 0; i < func_node.childs.length; i++) 
+                    func_node.temp_vals[i] = eval(func_node.childs[i]);
+                return func_node.function.apply(func_node.temp_vals);
         }
+        return Double.NaN;
     }
     
     public static ArithmeticExpression parse(String ex) {
-        ArithmeticExpression aex = new ArithmeticExpression();
-        String trimmedEx = ex.replaceAll("\\s+", "");
-        String[] tokens = split(trimmedEx);
-        tokens = convertToPostfix(tokens);
-        aex.root = buildTree(tokens, tokens.length - 1, aex.vars).x();
-        return aex;
-    }
-    
-    private static Pair<Node, Integer> buildTree(String[] tokens, int idx, Map<String, OperandNode> vars) {
-        String token = tokens[idx];
-        char c = token.charAt(0);
-        switch (c) {
-            case 'n':
-                return new Pair<>(new OperandNode(Double.parseDouble(token.substring(1))), idx);
-            case 'v':
-                OperandNode n;
-                String varName = token.substring(1);
-                n = vars.get(varName);
-                if (n == null) {
-                    n = new OperandNode(Double.NaN);
-                    vars.put(varName, n);
-                }
-                return new Pair<>(n, idx);
-            default:
-                int i = idx;
-                OperationNode op = new OperationNode();
-                if (c == 'o') {
-                    if (token.charAt(1) == 'u') { // unary minus
-                        op.func = Function.FUNCS.get("u-");
-                        op.operands = new Node[1];
-                        Pair<Node, Integer> p = buildTree(tokens, i - 1, vars);
-                        op.operands[0] = p.x();
-                        i = p.y();
-                    } else {
-                        op.func = Function.FUNCS.get(token.substring(2));
-                        op.operands = new Node[2];
-                        Pair<Node, Integer> child = buildTree(tokens, i - 1, vars);
-                        boolean commutative = isCommutative(op.func.name);
-                        if (commutative) op.operands[0] = child.x();
-                        else op.operands[1] = child.x();
-                        i = child.y();
-                        child = buildTree(tokens, i - 1, vars);
-                        if (commutative) op.operands[1] = child.x();
-                        else op.operands[0] = child.x();
-                        i = child.y();
-                    }
-                } else {
-                    String funcName = token.substring(1);
-                    Function f = Function.FUNCS.get(funcName);
-                    op.func = f;
-                    op.operands = new Node[f.numArgs];
-                    for (int j = 0; j < f.numArgs; j++) {
-                        Pair<Node, Integer> p = buildTree(tokens, i - 1, vars);
-                        i = p.y();
-                        op.operands[j] = p.x();
-                    }
-                }
-                return new Pair<>(op, i);
+        try {
+            String[] tokens = toTokens(ex);
+            String[] postfix = toPostfix(tokens);
+            testPostfix(postfix);
+            System.out.println(Arrays.toString(postfix));
+            return buildTree(postfix, new ArithmeticExpression());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Can't parse arithmetic expression");
         }
     }
     
-    private static final Pattern NUM  = Pattern.compile("[0-9]+(\\.[0-9]+)?");
-    private static final Pattern VAR  = Pattern.compile("[_$a-zA-Z][_$0-9a-zA-Z]*");
-    private static final Pattern FUNC = Pattern.compile("(sqrt|ln|log|sin|cos|tg|exp)");
-    
-    private static String[] split(String ex) {
+    public static final Pattern NUM_PATTERN = Pattern.compile("[0-9]+(\\.[0-9]+)?");
+    public static final Pattern VAR_PATTERN = Pattern.compile("[_$a-zA-Z][_$0-9a-zA-Z]*");
+
+    private static String[] toTokens(String ex) {
         List<String> tokens = new ArrayList<>();
-        Matcher num = NUM.matcher(ex), var = VAR.matcher(ex), func = FUNC.matcher(ex);
+        Matcher num_matcher = NUM_PATTERN.matcher(ex);
+        Matcher var_matcher = VAR_PATTERN.matcher(ex);
+        Matcher func_matcher = Function.FUNC_PATTERN.matcher(ex);
         for (int i = 0; i < ex.length();) {
             char c = ex.charAt(i);
             switch (c) {
+                case ' ':
+                    i++;
+                    break;
                 case '0':
                 case '1':
                 case '2':
@@ -133,10 +107,9 @@ public class ArithmeticExpression {
                 case '7':
                 case '8':
                 case '9':
-                    num.find(i);
-                    int offset = num.end();
-                    tokens.add("n" + ex.substring(i, offset));
-                    i = offset;
+                    num_matcher.find(i);
+                    tokens.add("n:" + ex.substring(i, num_matcher.end()));
+                    i = num_matcher.end();
                     break;
                 case '(':
                 case ')':
@@ -149,41 +122,46 @@ public class ArithmeticExpression {
                 case '*':
                 case '/':
                 case '^':
-//                  Only the unary minus at the 
-//                  beginning of the line or after the opening bracket is allowed
-                    boolean uMinus = c == '-' && (i == 0 || ex.charAt(i - 1) == '(');
-                    tokens.add(uMinus ? "ou-" : "ob" + c);
+                case '%':
+                    boolean u_minus = c == '-' && (tokens.isEmpty() || tokens.get(tokens.size() - 1).charAt(0) == '(' || tokens.get(tokens.size() - 1).charAt(0) == 'o');
+                    if (u_minus) {
+                        if (!tokens.isEmpty() && tokens.get(tokens.size() - 1).equals("o:u-"))
+                            throw new RuntimeException();
+                        tokens.add("o:u-");
+                    } else 
+                        tokens.add("o:" + c);
                     i++;
                     break;
                 default:
-                    if (func.find(i)) {
-                        offset = func.end();
-                        String funcName = ex.substring(i, offset);
-                        Function f = Function.FUNCS.get(funcName);
-                        tokens.add("f" + f.name);
+                    if (var_matcher.find(i) && var_matcher.start() == i) {
+                        String varName = ex.substring(i, var_matcher.end());
+                        if (varName.matches(Function.FUNC_PATTERN.pattern()))
+                            tokens.add("f:" + varName);
+                        else
+                            tokens.add("v:" + varName);
+                        i = var_matcher.end();
                     } else {
-                        var.find(i);
-                        offset = var.end();
-                        String varName = ex.substring(i, offset);
-                        tokens.add("v" + varName);
+                        if (func_matcher.find(i) && func_matcher.start() == i) {
+                            String funcName = ex.substring(i, func_matcher.end());
+                            tokens.add("f:" + funcName);
+                            i = func_matcher.end();
+                        } else
+                            throw new RuntimeException();
                     }
-                    i = offset;
                     break;
             }
         }
         return tokens.toArray(new String[tokens.size()]);
     }
     
-    
-    // the implementation of the sorting station algorithm 
-    // whose idea belongs to Edsger Dijkstra
-    private static String[] convertToPostfix(String[] tokens) {
-        boolean ok;
+//  the implementation of the sorting station algorithm 
+//  whose idea belongs to Edsger Dijkstra
+    private static String[] toPostfix(String[] tokens) {
         Stack<String> s = new Stack<>();
         List<String> postfix = new ArrayList<>();        
         for (String token : tokens) {
-            char c = token.charAt(0);            
-            switch (c) {
+            char id = token.charAt(0);            
+            switch (id) {
                 case 'n':
                 case 'v':
                     postfix.add(token);
@@ -193,160 +171,289 @@ public class ArithmeticExpression {
                     s.push(token);
                     break;
                 case ',':
-                    ok = false;
-                    while (!s.isEmpty()) {
-                        String t = s.peek();
-                        if (t.equals("(")) {
-                            ok = true;
-                            break;
-                        } else 
-                            s.push(t);
-                    }
-                    if (!ok)
-                        throw new IllegalArgumentException("Bracket or comma passed.");
+                    while (!s.peek().equals("(")) 
+                        postfix.add(s.pop());
                     break;
                 case ')':
-                    ok = false;
-                    while (!s.isEmpty()) {
-                        String op = s.pop();
-                        if (op.equals("(")) { 
-                            ok = true;
-                            if (!s.isEmpty() && s.peek().charAt(0) == 'f') 
-                                postfix.add(s.pop());
-                            break;
-                        } else 
-                            postfix.add(op);
-                    }
-                    if (!ok) 
-                        throw new IllegalArgumentException("Bracket passed.");
+                    while (!s.peek().equals("(")) 
+                        postfix.add(s.pop());
+                    s.pop();
+                    if (!s.isEmpty() && s.peek().charAt(0) == 'f')
+                        postfix.add(s.pop());
                     break;
                 case 'o':
-                    int p = priorityOf(token);
+                    int p1 = priorityOf(token);
                     boolean left = isLeft(token);
-                    while (!s.isEmpty()) {
-                        String op = s.peek();
-                        int pp = priorityOf(op);
-                        if (left) {
-                            if (p <= pp) 
-                                postfix.add(s.pop());
-                            else 
-                                break;
-                        } else {
-                            if (p < pp) 
-                                postfix.add(s.pop());
-                            else
-                                break;
-                        }
+                    while (!s.isEmpty() && s.peek().charAt(0) != '(') {
+                        int p2 = priorityOf(s.peek());
+                        if ((left && p1 <= p2) || (!left && p1 < p2))
+                            postfix.add(s.pop());
+                        else 
+                            break;
                     }
                     s.push(token);
                     break;
             }
         }
-        
         while (!s.isEmpty()) {
-            String op = s.pop();
-            if (op.charAt(0) == '(' || op.charAt(0) == ')') 
-                throw new IllegalArgumentException("Bracket passed.");
-            postfix.add(op);
+            String token = s.pop();
+            if (token.charAt(0) == '(' || token.charAt(0) == ')') 
+                throw new RuntimeException();
+            postfix.add(token);
         }
-        
         return postfix.toArray(new String[postfix.size()]);
     }
     
-    private static int priorityOf(String op) {
-        switch (op) {
-            case "ob+":
-            case "ob-":
+    private static int priorityOf(String opToken) {
+        switch (opToken) {
+            case ")":
+                return 0;
+            case "o:+":
+            case "o:-":
                 return 1;
-            case "ob*":
-            case "ob/":
+            case "o:*":
+            case "o:/":
+            case "o:%":
                 return 2;
-            case "ob^":
+            case "o:^":
                 return 3;
-            case "ou-":
+            case "o:u-":
                 return 4;
             default:
-                return -1;
+                throw new RuntimeException();
         }
     }
     
-    private static boolean isLeft(String op) {
-        return !op.equals("ob^") && !op.equals("ou-");
-    }
-    
-    private static boolean isCommutative(String name) {
-        switch (name) {
-            case "+":
-            case "*":
+    private static boolean isLeft(String opToken) {
+        switch (opToken) {
+            case "o:^":
+            case "o:u-":
                 return true;
-            case "-":
-            case "/":
-            case "^":
-                return false;
             default:
-                throw new IllegalArgumentException("Unknown operation.");
+                return false;
         }
     }
     
-    private static class Function {
-        
-        static final Map<String, Function> FUNCS = new HashMap<>();
-        
-        static {
-            FUNCS.put("+", new Function("+", 2));
-            FUNCS.put("-", new Function("-", 2));
-            FUNCS.put("*", new Function("*", 2));
-            FUNCS.put("/", new Function("/", 2));
-            FUNCS.put("^", new Function("^", 2));
-            FUNCS.put("u-", new Function("u-", 1));
-            FUNCS.put("sqrt", new Function("sqrt", 1));
-            FUNCS.put("ln",   new Function("ln", 1));
-            FUNCS.put("log",  new Function("log", 2));
-            FUNCS.put("sin",  new Function("sin", 1));
-            FUNCS.put("cos",  new Function("cos", 1));
-            FUNCS.put("tan",  new Function("tan", 1));
-            FUNCS.put("exp",  new Function("exp", 1));
-        }
-        
-        final String name;
-        final int numArgs;
-        
-        Function(String name, int numArgs) {
-            this.name = name;
-            this.numArgs = numArgs;
-        }
-        
-        double compute(double[] vals) {
-            switch (name) {
-                case "+":    return vals[0] + vals[1];
-                case "-":    return vals[0] - vals[1];
-                case "*":    return vals[0] * vals[1];
-                case "/":    return vals[0] / vals[1];
-                case "^":    return Math.pow(vals[0], vals[1]);
-                case "u-":   return -vals[0];
-                case "sqrt": return Math.sqrt(vals[0]);
-                case "ln":   return Math.log(vals[0]);
-                case "log":  return Math.log10(vals[1]) / Math.log10(vals[0]); 
-                case "sin":  return Math.sin(vals[0]);
-                case "cos":  return Math.cos(vals[0]);
-                case "tan":  return Math.tan(vals[0]);
-                case "exp":  return Math.exp(vals[0]);
-                default:     return Double.NaN;
+//  check that this is correct reverse polish notation
+    private static void testPostfix(String[] postfix) {
+        int numArgs;
+        Object obj = new Object(); 
+        Stack<Object> operands = new Stack<>();
+        for (String token : postfix) {
+            char id = token.charAt(0);
+            switch (id) {
+                case 'n':
+                case 'v':
+                    operands.push(obj);
+                    break;
+                case 'o':
+                    numArgs = Operator.getByOperatorToken(token).numArgs;
+                    for (int i = 0; i < numArgs - 1; i++)
+                        operands.pop();
+                    break;
+                case 'f':
+                    numArgs = Function.getByFunctionToken(token).numArgs;
+                    for (int i = 0; i < numArgs - 1; i++)
+                        operands.pop();
+                    break;
             }
         }
-        
+        if (operands.size() != 1)
+            throw new RuntimeException();
     }
     
-    private interface Node {} // marker
+    private static ArithmeticExpression buildTree(String[] postfix, ArithmeticExpression dest) {
+        dest.root = buildTree(postfix, postfix.length - 1, dest).x();
+        return dest;
+    }
+    
+    private static Pair<Node, Integer> buildTree(String[] postfix, int i, ArithmeticExpression dest) {
+        Node node;
+        int subtreeEndIndex;
+        String token = postfix[i];
+        char id = token.charAt(0);
+        switch (id) {
+            case 'n':
+                subtreeEndIndex = i;
+                node = new OperandNode(Double.parseDouble(token.substring(2)));
+                break;
+            case 'v':
+                subtreeEndIndex = i;
+                String varName = token.substring(2);
+                node = dest.vars.get(varName);
+                if (node == null) {
+                    dest.vars.put(varName, new OperandNode(Double.NaN));
+                    node = dest.vars.get(varName);
+                }
+                break;
+            case 'o':
+                subtreeEndIndex = i - 1;
+                Operator operator = Operator.getByOperatorToken(token);
+                OperatorNode operatorNode = new OperatorNode(operator);
+                node = operatorNode;
+                for (int j = 0; j < operator.numArgs; j++) {
+                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex, dest);
+                    operatorNode.childs[operator.numArgs - j - 1] = next.x();
+                    subtreeEndIndex = next.y() - 1;
+                }
+                subtreeEndIndex += 1;
+                break;
+            case 'f':
+                subtreeEndIndex = i - 1;
+                Function function = Function.getByFunctionToken(token);
+                FunctionNode functionNode = new FunctionNode(function);
+                node = functionNode;
+                for (int j = 0; j < function.numArgs; j++) {
+                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex, dest);
+                    functionNode.childs[function.numArgs - j - 1] = next.x();
+                    subtreeEndIndex = next.y() - 1;
+                }
+                subtreeEndIndex += 1;
+                break;
+            default:
+                throw new RuntimeException();
+        }
+        return new Pair<>(node, subtreeEndIndex);
+    }
+    
+    private static interface Node {}
     
     private static class OperandNode implements Node {
         double val;
         OperandNode(double val) {this.val = val;}
     }
     
-    private static class OperationNode implements Node {
-        Function func;
-        Node[] operands;
+    private static class OperatorNode implements Node {
+        
+        final double[] temp_vals;
+        
+        final Operator operator;
+        final Node[] childs;
+        
+        OperatorNode(Operator operator) {
+            this.operator = operator;
+            childs = new Node[operator.numArgs];
+            temp_vals = new double[operator.numArgs];
+        }
+        
+    }
+    
+    private static class FunctionNode implements Node {
+        
+        final double[] temp_vals;
+        
+        final Function function;
+        final Node[] childs;
+        
+        FunctionNode(Function function) {
+            this.function = function;
+            childs = new Node[function.numArgs];
+            this.temp_vals = new double[function.numArgs];
+        }
+        
+    }
+    
+    private static enum Operator {
+        
+        UNARY_MINUS((args) -> {return -args[0];}, 1),
+        PLUS((args) -> {return args[0] + args[1];}, 2), 
+        MINUS((args) -> {return args[0] - args[1];}, 2), 
+        MULTIPLE((args) -> {return args[0] * args[1];}, 2),
+        DIVIDE((args) -> {return args[0] / args[1];}, 2), 
+        POWER((args) -> {return Math.pow(args[0], args[1]);}, 2),
+        MODULO((args) -> {return args[0] % args[1];}, 2);
+        
+        final int numArgs;
+        final java.util.function.Function<double[], Double> f;
+        
+        Operator(java.util.function.Function<double[], Double> f, int numArgs) {
+            this.f = f;
+            this.numArgs = numArgs;
+        }
+        
+        double apply(double[] vals) {
+            return f.apply(vals);
+        }
+        
+        static Operator getByOperatorToken(String opToken) {
+            switch (opToken) {
+                case "o:u-": return UNARY_MINUS;
+                case "o:+":  return PLUS;
+                case "o:-":  return MINUS;
+                case "o:*":  return MULTIPLE;
+                case "o:/":  return DIVIDE;
+                case "o:^":  return POWER;
+                case "o:%":  return MODULO;
+                default:
+                    throw new RuntimeException();
+            }
+        }
+        
+    }
+    
+    public static class Function {
+        
+        private static Pattern FUNC_PATTERN = Pattern.compile("");
+        public static Pattern ALLOWABLE_FUNC_NAME = Pattern.compile("[a-zA-Z]+[a-zA-Z0-9]*");
+        
+        private static final Map<String, Function> ALL = new HashMap<>();
+        
+        private final int numArgs;
+        private final java.util.function.Function<double[], Double> f;
+        
+        private Function(java.util.function.Function<double[], Double> f, int numArgs) {
+            this.f = f;
+            this.numArgs = numArgs;
+        }
+        
+        public int numArgs() {
+            return numArgs;
+        }
+        
+        public double apply(double[] vals) {
+            return f.apply(vals);
+        }
+        
+        public static Iterable<Map.Entry<String, Function>> getAllFunctions() {
+            return Collections.unmodifiableSet(ALL.entrySet());
+        }
+        
+        public static Function getByName(String name) {
+            return ALL.get(name);
+        }
+        
+        static Function getByFunctionToken(String funcToken) {
+            return ALL.get(funcToken.substring(2));
+        }
+        
+        public static void newFunction(String name, java.util.function.Function<double[], Double> f, int numArgs) {
+            if (ALL.containsKey(name))
+                throw new IllegalArgumentException("Function with name " + name + " already exists.");
+            Matcher m = ALLOWABLE_FUNC_NAME.matcher(name);
+            if (!m.find() || m.start() != 0 || m.end() != name.length())
+                throw new IllegalArgumentException("");
+            ALL.put(name, new Function(f, numArgs));
+            String prev_pattern = FUNC_PATTERN.pattern();
+            FUNC_PATTERN = Pattern.compile(name + (prev_pattern.isEmpty() ? "" : "|") + prev_pattern);
+        }
+        
+        public static void removeFunction(String name) {
+            if (ALL.containsKey(name)) {
+                ALL.remove(name);
+                String[] prev_pattern = FUNC_PATTERN.pattern().split("\\|");
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < prev_pattern.length; i++) {
+                    String func_name = prev_pattern[i];
+                    if (func_name.equals(name)) 
+                        continue;
+                    sb.append(func_name);
+                    if (i != prev_pattern.length - 1)
+                        sb.append("|");
+                }
+                FUNC_PATTERN = Pattern.compile(sb.toString());
+            }
+        }
+        
     }
     
 }

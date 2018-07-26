@@ -45,6 +45,7 @@ public class RandomQueue<E> implements Iterable<E> {
         int idx = rnd.nextInt(size--);
         E e = elems[idx];
         elems[idx] = elems[size];
+        elems[size] = null;
         if (size < elems.length / 4) 
             resize(elems.length / 2);
         return e;

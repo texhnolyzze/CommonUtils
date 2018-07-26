@@ -60,14 +60,6 @@ public final class StringUtils {
 	return -1;
     }
     
-    public static void main(String[] args) {
-        String pat = "ABCDABD";
-        String s = "ABC ABCDAB ABCDABCDABDE";
-        System.out.println(indexOfRabinCarp(s, pat));
-        System.out.println(indexOfKMP(s, pat, null));
-        System.out.println(indexOfFSM(s, pat, null));
-    }
-    
 //  Cache for effective substring search by Knuth-Morris-Pratt(KMP) algorithm
     public static int[] prefixFunction(String s) {
         int[] p = new int[s.length()];

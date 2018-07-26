@@ -78,7 +78,7 @@ public class Alphabet implements Iterable<Character> {
             if (other.indexOf == null)
                 return false;
             else
-                return Arrays.equals(alphabet.chars, other.alphabet.chars);
+                return alphabet.equals(other.alphabet);
         }
     }
 
@@ -146,11 +146,13 @@ public class Alphabet implements Iterable<Character> {
         char[] alphabet = new char[set.size()];
         for (char c : set)
             alphabet[index++] = c;
-        Alphabet cached = ALL.get(new CharArray(alphabet));
+        CharArray arr = new CharArray(alphabet);
+        arr.hashCode = Arrays.hashCode(arr.chars);
+        Alphabet cached = ALL.get(arr);
         if (cached != null)
             return cached;
         Alphabet a = new Alphabet();
-        a.alphabet = new CharArray(alphabet);
+        a.alphabet = arr;
         a.indexOf = new HashMap<>(alphabet.length);
         for (int i = 0; i < alphabet.length; i++) 
             a.indexOf.put(alphabet[i], i);
@@ -160,11 +162,12 @@ public class Alphabet implements Iterable<Character> {
     
     private static class CharArray {
         
-        final char[] chars;
+        char[] chars;
         int hashCode;
-        boolean hashCodeCalc;
         
-        CharArray(char[] chars) {this.chars = chars;}
+        CharArray(char[] chars) {
+            this.chars = chars;
+        }
 
         @Override
         public boolean equals(Object obj) {
@@ -173,9 +176,6 @@ public class Alphabet implements Iterable<Character> {
 
         @Override
         public int hashCode() {
-            if (hashCodeCalc)
-                return hashCode;
-            hashCode = Arrays.hashCode(chars);
             return hashCode;
         }
         
