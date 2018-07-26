@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  * @author Texhnolyze
  */
 public final class ArithmeticExpression {
-
+    
 //  add some common functions
     static {
         Function.newFunction("sqrt", (vals) -> {return Math.sqrt(vals[0]);}, 1);
@@ -237,28 +237,25 @@ public final class ArithmeticExpression {
 //  check that this is correct reverse polish notation
     private static void testPostfix(String[] postfix) {
         int numArgs;
-        Object obj = new Object(); 
-        Stack<Object> operands = new Stack<>();
+        int stackSize = 0;
         for (String token : postfix) {
             char id = token.charAt(0);
             switch (id) {
                 case 'n':
                 case 'v':
-                    operands.push(obj);
+                    stackSize++;
                     break;
                 case 'o':
                     numArgs = Operator.getByOperatorToken(token).numArgs;
-                    for (int i = 0; i < numArgs - 1; i++)
-                        operands.pop();
+                    stackSize -= (numArgs - 1);
                     break;
                 case 'f':
                     numArgs = Function.getByFunctionToken(token).numArgs;
-                    for (int i = 0; i < numArgs - 1; i++)
-                        operands.pop();
+                    stackSize -= (numArgs - 1);
                     break;
             }
         }
-        if (operands.size() != 1)
+        if (stackSize != 1)
             throw new RuntimeException();
     }
     
