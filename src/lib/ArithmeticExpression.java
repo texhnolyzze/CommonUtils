@@ -1,11 +1,11 @@
 package lib;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +49,11 @@ public final class ArithmeticExpression {
             throw new IllegalArgumentException("There is no variable named " + var + ".");
     }
     
+    public void forEachVariable(BiConsumer<String, Double> c) {
+        for (Map.Entry<String, OperandNode> e : vars.entrySet())
+            c.accept(e.getKey(), e.getValue().val);
+    } 
+    
     public double eval() {
         return eval(root);
     }
@@ -76,7 +81,6 @@ public final class ArithmeticExpression {
             String[] tokens = toTokens(ex);
             String[] postfix = toPostfix(tokens);
             testPostfix(postfix);
-            System.out.println(Arrays.toString(postfix));
             return buildTree(postfix, new ArithmeticExpression());
         } catch (Exception e) {
             throw new IllegalArgumentException("Can't parse arithmetic expression");
@@ -228,9 +232,9 @@ public final class ArithmeticExpression {
         switch (opToken) {
             case "o:^":
             case "o:u-":
-                return true;
-            default:
                 return false;
+            default:
+                return true;
         }
     }
     
@@ -266,16 +270,14 @@ public final class ArithmeticExpression {
     
     private static Pair<Node, Integer> buildTree(String[] postfix, int i, ArithmeticExpression dest) {
         Node node;
-        int subtreeEndIndex;
+        int subtreeEndIndex = i;
         String token = postfix[i];
         char id = token.charAt(0);
         switch (id) {
             case 'n':
-                subtreeEndIndex = i;
                 node = new OperandNode(Double.parseDouble(token.substring(2)));
                 break;
             case 'v':
-                subtreeEndIndex = i;
                 String varName = token.substring(2);
                 node = dest.vars.get(varName);
                 if (node == null) {
@@ -284,28 +286,24 @@ public final class ArithmeticExpression {
                 }
                 break;
             case 'o':
-                subtreeEndIndex = i - 1;
                 Operator operator = Operator.getByOperatorToken(token);
                 OperatorNode operatorNode = new OperatorNode(operator);
                 node = operatorNode;
                 for (int j = 0; j < operator.numArgs; j++) {
-                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex, dest);
+                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex - 1, dest);
                     operatorNode.childs[operator.numArgs - j - 1] = next.x();
-                    subtreeEndIndex = next.y() - 1;
+                    subtreeEndIndex = next.y();
                 }
-                subtreeEndIndex += 1;
                 break;
             case 'f':
-                subtreeEndIndex = i - 1;
                 Function function = Function.getByFunctionToken(token);
                 FunctionNode functionNode = new FunctionNode(function);
                 node = functionNode;
                 for (int j = 0; j < function.numArgs; j++) {
-                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex, dest);
+                    Pair<Node, Integer> next = buildTree(postfix, subtreeEndIndex - 1, dest);
                     functionNode.childs[function.numArgs - j - 1] = next.x();
-                    subtreeEndIndex = next.y() - 1;
+                    subtreeEndIndex = next.y();
                 }
-                subtreeEndIndex += 1;
                 break;
             default:
                 throw new RuntimeException();
@@ -428,7 +426,7 @@ public final class ArithmeticExpression {
                 throw new IllegalArgumentException("Function with name " + name + " already exists.");
             Matcher m = ALLOWABLE_FUNC_NAME.matcher(name);
             if (!m.find() || m.start() != 0 || m.end() != name.length())
-                throw new IllegalArgumentException("");
+                throw new IllegalArgumentException("Illegal function name.");
             ALL.put(name, new Function(f, numArgs));
             String prev_pattern = FUNC_PATTERN.pattern();
             FUNC_PATTERN = Pattern.compile(name + (prev_pattern.isEmpty() ? "" : "|") + prev_pattern);
