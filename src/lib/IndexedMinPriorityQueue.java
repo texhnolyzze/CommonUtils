@@ -1,11 +1,9 @@
 package lib;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  *
@@ -14,8 +12,8 @@ import java.util.Set;
 public class IndexedMinPriorityQueue<E> {
     
     private E[] heap;
-    private Map<E, Integer> indexOf;
-    private Comparator<E> cmp;
+    private final Map<E, Integer> indexOf;
+    private final Comparator<E> cmp;
     
     private int size;
     
@@ -29,7 +27,12 @@ public class IndexedMinPriorityQueue<E> {
         indexOf = new HashMap<>();
     }
     
-    private IndexedMinPriorityQueue() {}
+    private IndexedMinPriorityQueue(E[] heap, Map<E, Integer> indexOf, Comparator<E> cmp, int size) {
+        this.heap = heap;
+        this.indexOf = indexOf;
+        this.cmp = cmp;
+        this.size = size;
+    }
     
     public void clear() {
         heap = (E[]) new Object[32];
@@ -54,7 +57,7 @@ public class IndexedMinPriorityQueue<E> {
     }
     
     public void add(E e) {
-        if (indexOf.get(e) != null) 
+        if (indexOf.containsKey(e)) 
             return;
         if (size == heap.length) 
             resize(2 * heap.length);
@@ -81,12 +84,22 @@ public class IndexedMinPriorityQueue<E> {
 //  which it's ordering depends changed
     public void priorityChanged(E e) {
         Integer idx = indexOf.get(e);
-        if (idx == null) return;
+        if (idx == null) 
+            return;
         int parent = parent(idx);
         if (parent != -1 && cmp.compare(e, heap[parent]) < 0) 
             emerge(idx, heap, indexOf, cmp);
         else 
             drown(idx, size, heap, indexOf, cmp);
+    }
+    
+    public void remove(E e) {
+        Integer idx = indexOf.get(e);
+        if (idx == null) 
+            return;
+        Comparator<E> temp_cmp = (e1, e2) -> -1;
+        emerge(idx, heap, indexOf, temp_cmp);
+        pop();
     }
     
     private void resize(int cap) {
@@ -96,20 +109,13 @@ public class IndexedMinPriorityQueue<E> {
     }
     
     public static <E> IndexedMinPriorityQueue<E> fromArray(E[] arr, Comparator<E> cmp) {
-        Set<E> set = new HashSet<>();
-        set.addAll(Arrays.asList(arr));
-        E[] heapRaw = (E[]) set.toArray();
-        int N = heapRaw.length;
-        for (int i = N / 2; i >= 0; i--) 
-            drown(i, N, heapRaw, null, cmp);
+        E[] heapArr = Stream.of(arr).distinct().toArray(size -> (E[]) new Object[size]);
+        int N = heapArr.length;
+        heapify(heapArr, cmp);
         Map<E, Integer> indexOf = new HashMap<>();
         for (int i = 0; i < N; i++) 
-            indexOf.put(heapRaw[i], i);
-        IndexedMinPriorityQueue<E> heap = new IndexedMinPriorityQueue<>();
-        heap.cmp = cmp;
-        heap.heap = heapRaw;
-        heap.size = N;
-        heap.indexOf = indexOf;
+            indexOf.put(heapArr[i], i);
+        IndexedMinPriorityQueue<E> heap = new IndexedMinPriorityQueue<>(heapArr, indexOf, cmp, N);
         return heap;
     }
     

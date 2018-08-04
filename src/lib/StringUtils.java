@@ -79,13 +79,37 @@ public final class StringUtils {
     }
     
     public static class StateMachine {
-        
+    
+        private final int m;
         private final int[] fsm;
         private final Alphabet alphabet;
         
         private StateMachine(int[] fsm, Alphabet alphabet) {
             this.fsm = fsm;
             this.alphabet = alphabet;
+            this.m = fsm.length / alphabet.size();
+        }
+        
+        private int state;
+        
+        public int getState() {
+            return state;
+        }
+        
+        public boolean nextChar(char c) {
+            if (state == m)
+                throw new IllegalStateException("Machine in final state, call reset method first.");
+            int i = alphabet.indexOf(c);
+            if (i == -1) {
+                state = 0;
+                return false;
+            }
+            state = fsm[to2DArrayHash(state, i, m)];
+            return state == m;
+        }
+        
+        public void reset() {
+            state = 0;
         }
         
         public Alphabet getAlphabet() {
