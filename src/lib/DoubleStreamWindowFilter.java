@@ -106,7 +106,7 @@ public class DoubleStreamWindowFilter {
                 while (it.hasNext() && i < windowSize)
                     arr[i++] = it.nextDouble();
                 if (i == windowSize) {
-                    IndexedMedianFinder medianFinder = windowSize > 30 ? new IndexedOrderedSequenceOfDouble(arr) : new RandomizedBSTOfDouble(arr);
+                    IndexedMedianFinder medianFinder = windowSize <= 30 ? new IndexedOrderedSequenceOfDouble(arr) : new RandomizedBSTOfDouble(arr);
                     consumer.accept(0, medianFinder.getMedian());
                     while (it.hasNext()) {
                         medianFinder.setOn(i % windowSize, it.nextDouble());
