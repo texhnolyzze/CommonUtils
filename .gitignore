@@ -1,2 +1,6 @@
+/build/
+build.xml
+output.txt
+manifest.mf
 /dist/
-/nbproject/private/
+/test/sandbox/
