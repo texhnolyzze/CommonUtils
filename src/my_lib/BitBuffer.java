@@ -24,16 +24,15 @@ public class BitBuffer  {
     public BitBuffer() {this(4);}
     public BitBuffer(int initCap) {buffer = new int[max(1, initCap)];}
     
-    //returns the number of significant bits
+//  returns the number of significant bits
     public int numBits() {
         return bitIdx;
     }
     
-    // returns the number of completely filled integers
+// returns the number of completely filled integers
     public int numInts() {
         return intIdx;
     }
-    
     
     public BitBuffer append(int bit) {
         if ((bitIdx + 1) >> SHIFT == buffer.length)
@@ -45,6 +44,7 @@ public class BitBuffer  {
     
 //  Adds n bits to the end of the buffer in order from the 
 //  least significant bit to the highest
+//  for example, if you add n=14, which is "1110" and your buffer now empty, the buffer will become "0111"
     public BitBuffer append(int bits, int n) {
         if (n <= 0 || n > R) 
             throw new IllegalArgumentException("n must be > 0 and <= " + R);

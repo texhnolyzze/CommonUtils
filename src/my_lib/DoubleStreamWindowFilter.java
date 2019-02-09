@@ -278,12 +278,11 @@ public class DoubleStreamWindowFilter {
         
         RandomizedBSTOfDouble(double[] arr) {
             this.keys = arr;
-            Pool.Builder<Node> builder = Pool.builder(() -> new Node());
-            this.pool = builder.setObjectsCanCreate(arr.length).setReseter((n) -> {
-                n.size = 1;
-                n.left_child = null;
-                n.right_child = null;
-            }).build();
+            this.pool = new Pool<>(() -> {return new Node();}, (node) -> {
+                node.size = 1;
+                node.left_child = null;
+                node.right_child = null;
+            });
             for (int i = 0; i < arr.length; i++) 
                 root = put(arr[i], root);
         }
