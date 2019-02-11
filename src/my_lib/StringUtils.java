@@ -1,6 +1,11 @@
 package my_lib;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import static my_lib.MathUtils.*;
@@ -79,17 +84,158 @@ public final class StringUtils {
         return p;
     }
     
-//  TODO: 
-//    public static class MultiPatternSearchMachine {
-//        
-//        public static MultiPatternSearchMachine build(Iterable<String> lines) {
-//            Alphabet a = Alphabet.fromLines(lines);
-//            lines.forEach((line) -> {
-//                
-//            });
-//        }
-//        
-//    }
+    public static class MultiPatternSearchMachine {
+        
+        private final Node root = new Node('\0', null, false); 
+        private final String[] patterns;
+        {root.parent = root.suffixReference = root;}
+        
+        private MultiPatternSearchMachine(Iterable<String> lines, int numLines) {
+            int idx = 0;
+            patterns = new String[numLines];
+            for (String line : lines) {
+                if (line.isEmpty())
+                    throw new IllegalArgumentException("Empty lines aren't allowed.");
+                patterns[idx] = line;
+                addLine(line, idx, 0, root);
+                idx++;
+            }
+            if (idx != numLines)
+                throw new IllegalArgumentException("Wrong number of lines: " + numLines + "; actual number: " + idx);
+            Queue<Node> q = new Queue<>();
+            q.add(root);
+            while (!q.isEmpty()) {
+                Node n = q.poll();
+                n.suffixReference = getSuffixReference(n);
+                n.nextLeafNode = getNextLeafNode(n);
+                n.childs.values().stream().forEach((child) -> {q.add(child);});
+            }
+        }
+        
+        private void addLine(String line, int lineIdx, int i, Node n) {
+            Node child;
+            if (i + 1 == line.length()) {
+                child = new Node(line.charAt(i), n, true);
+                child.matchingPatternIndex = lineIdx;
+                n.childs.put(line.charAt(i), child);
+            } else {
+                if (n.childs.containsKey(line.charAt(i))) 
+                    child = n.childs.get(line.charAt(i));
+                else {
+                    child = new Node(line.charAt(i), n, false);
+                    n.childs.put(line.charAt(i), child);
+                }
+                addLine(line, lineIdx, i + 1, child);
+            }
+            
+        }
+        
+        private Node getSuffixReference(Node n) {
+            Node temp = n.parent;
+            while (true) {
+                if (temp == root)
+                    return root;
+                Node ref = temp.suffixReference.childs.get(n.charToParent);
+                if (ref != null)
+                    return ref;
+                temp = temp.suffixReference;
+            }
+        }
+        
+        private Node getNextLeafNode(Node n) {
+            Node temp = n;
+            while (true) {
+                temp = temp.suffixReference;
+                if (temp == root) 
+                    return null;
+                if (temp.isLeaf)
+                    return temp;
+            }
+        }
+        
+        private Node state = root;
+        public void reset() {state = root;}
+        public Iterable<String> nextChar(char c) {
+            Node n;
+            while ((n = state.childs.get(c)) == null) {
+                if (state == root)
+                    return Collections.EMPTY_LIST;
+                state = state.suffixReference;
+            }
+            state = n;
+            if (state.isLeaf || state.nextLeafNode != null) {
+                return () -> {
+                    return iterator();
+                };
+            }
+            return Collections.EMPTY_LIST;
+        }
+//                                                 match             bounds
+        public void search(String text, BiConsumer<String, Pair<Integer, Integer>> callback) {search(text, callback, 0, text.length() - 1);}
+        public void search(String text, BiConsumer<String, Pair<Integer, Integer>> callback, int from) {search(text, callback, from, text.length() - 1);}
+        public void search(String text, BiConsumer<String, Pair<Integer, Integer>> callback, int from, int to) {
+            Node n;
+            for (int i = from; i <= to; i++) {
+                while ((n = state.childs.get(text.charAt(i))) == null) {
+                    if (state == root)
+                        break;
+                    state = state.suffixReference;
+                }
+                if (n != null) 
+                    state = n;
+                if (state.isLeaf || state.nextLeafNode != null) {
+                    Node curr = state.isLeaf ? state : state.nextLeafNode;
+                    while (curr != null) {
+                        String match = patterns[curr.matchingPatternIndex];
+                        callback.accept(match, new Pair<>(i - match.length() + 1, i));
+                        curr = curr.nextLeafNode;
+                    }
+                }
+            }
+        }
+        
+        private Iterator<String> iterator() {
+            return new Iterator<String>() {
+                Node curr = state.isLeaf ? state : state.nextLeafNode;
+                @Override public boolean hasNext() {return curr != null;}
+                @Override
+                public String next() {
+                    String s = patterns[curr.matchingPatternIndex];
+                    curr = curr.nextLeafNode;
+                    return s;
+                }
+            };
+        }
+        
+        private static class Node {
+            boolean isLeaf;
+            char charToParent;
+            int matchingPatternIndex;
+            Node parent, suffixReference, nextLeafNode;
+            Map<Character, Node> childs = new HashMap<>(1);
+            Node(char charToParent, Node parent, boolean isLeaf) {
+                this.charToParent = charToParent;
+                this.isLeaf = isLeaf;
+                this.parent = parent;
+            }
+        }
+        
+        public static MultiPatternSearchMachine build(Iterable<String> lines) {
+            int size = 0;
+            if (lines instanceof Collection) 
+                size = ((Collection<?>) lines).size();
+            else {
+                for (String line : lines)
+                    size++;
+            }
+            return new MultiPatternSearchMachine(lines, size);
+        }
+        
+        public static MultiPatternSearchMachine build(Iterable<String> lines, int numLines) {
+            return new MultiPatternSearchMachine(lines, numLines);
+        }
+        
+    }
     
     public static class SinglePatternSearchMachine {
     
@@ -105,10 +251,7 @@ public final class StringUtils {
         
         private int state;
         
-        public int getState() {
-            return state;
-        }
-        
+        public boolean isInFinalState() {return state == m;}
         public boolean nextChar(char c) {
             if (state == m)
                 throw new IllegalStateException("Machine in final state, call reset method first.");
@@ -119,6 +262,27 @@ public final class StringUtils {
             }
             state = fsm[to2DArrayHash(state, i, m)];
             return state == m;
+        }
+        
+        public int search(String text) {return search(text, 0, text.length() - 1);}
+        public int search(String text, int from) {return search(text, from, text.length() - 1);}
+        public int search(String text, int from, int to) {
+            if (state == m)
+                throw new IllegalStateException("Machine in final state, call reset method first.");
+            int n = to - from + 1;
+            if (n == 0 || n < m)
+                return -1;
+            for (int i = from; i <= to; i++) {
+                int index = alphabet.indexOf(text.charAt(i));
+                if (index == -1)
+                    state = 0;
+                else {
+                    state = fsm[to2DArrayHash(state, index, m)];
+                    if (state == m)
+                        return i - m + 1;
+                }
+            }
+            return -1;
         }
         
         public void reset() {
@@ -148,6 +312,8 @@ public final class StringUtils {
 //      Cache for effective substring search by FSM algorithm
         public static final SinglePatternSearchMachine build(String pattern) {
             int m = pattern.length();
+            if (m == 0)
+                throw new IllegalArgumentException("pattern.length() must be >0");
             Alphabet alphabet = Alphabet.fromString(pattern);
             int[] fsm = new int[m * alphabet.size()];
             int[] p = prefixFunction(pattern);
@@ -164,36 +330,6 @@ public final class StringUtils {
             return new SinglePatternSearchMachine(fsm, alphabet);
         }
         
-    }
-    
-    public static int indexOfFSM(String s, String pattern, SinglePatternSearchMachine fsm) {
-        return indexOfFSM(s, pattern, 0, s.length() - 1, fsm);
-    }
-    
-    public static int indexOfFSM(String s, String pattern, int from, SinglePatternSearchMachine fsm) {
-        return indexOfFSM(s, pattern, from, s.length() - 1, fsm);
-    }
-    
-    public static int indexOfFSM(String s, String pattern, int from, int to, SinglePatternSearchMachine fsm) {
-        int n = to - from + 1, m = pattern.length();
-        if (n == 0 || n < m)
-            return -1;
-        if (m == 0)
-            return from;
-        if (fsm == null) 
-            fsm = SinglePatternSearchMachine.build(pattern);
-        int state = 0;
-        for (int i = from; i <= to; i++) {
-            int index = fsm.alphabet.indexOf(s.charAt(i));
-            if (index == -1)
-                state = 0;
-            else {
-                state = fsm.fsm[to2DArrayHash(state, index, m)];
-                if (state == m)
-                    return i - m + 1;
-            }
-        }
-        return -1;
     }
     
     public static int indexOfKMP(String s, String pattern, int[] prefixFunction) {

@@ -41,5 +41,10 @@ public class Pair<X, Y> {
         if (!Objects.equals(this.x, other.x)) return false;
         return Objects.equals(this.y, other.y);
     }
+
+    @Override
+    public String toString() {
+        return "Pair{" + "x=" + x + ", y=" + y + '}';
+    }
     
 }
