@@ -24,7 +24,7 @@ public class IndexedMinPriorityQueue<E> {
     public IndexedMinPriorityQueue(int initCap, Comparator<E> cmp) {
         this.cmp = cmp;
         heap = (E[]) new Object[initCap];
-        indexOf = new HashMap<>();
+        indexOf = new HashMap<>(initCap);
     }
     
     private IndexedMinPriorityQueue(E[] heap, Map<E, Integer> indexOf, Comparator<E> cmp, int size) {
