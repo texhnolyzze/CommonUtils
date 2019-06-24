@@ -27,7 +27,7 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
     ByKeySizeableLoader<K, V> getByKeySizeableLoader();
     void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader);
     
-    V getFromCache(K key);
+    V getFromCacheOrLoad(K key);
     Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed();
     
     public static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
@@ -38,7 +38,7 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
 
         private long sizeBytes;
         private long capacityBytes;
-        ByKeySizeableLoader<K, V> loader;
+        private ByKeySizeableLoader<K, V> loader;
         
         LRUCacheImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
             this.capacityBytes = capacityBytes;
@@ -65,7 +65,7 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
         @Override public void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader) {this.loader = loader;}
 
         @Override
-        public V getFromCache(K key) {
+        public V getFromCacheOrLoad(K key) {
             V val = get(key);
             if (val != null) {
                 remove(key);
