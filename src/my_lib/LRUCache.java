@@ -1,5 +1,7 @@
 package my_lib;
 
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -8,60 +10,86 @@ import java.util.Map.Entry;
  *
  * @author Texhnolyze
  * @param <K> key 
- * @param <V> value (heavy object to be cached)
+ * @param <V extends LRUCache.Sizeable> value (heavy object to be cached). Must implement LRUCache.Sizeable
  */
-public interface LRUCache<K, V> {
+public interface LRUCache<K, V extends LRUCache.Sizeable> {
     
-    int getMaxSize();
-    void setMaxSize(int maxSize);
+    public interface Sizeable {long getSizeBytes();}
+    public interface ByKeySizeableLoader<K, V extends Sizeable> {
+        V load(K key); 
+        long estimateSizeBytes(K key);
+    }
+    
+    long getSizeBytes();
+    long getMaxCapacityBytes();
+    void setMaxCapacity(long capacityBytes);
+    
+    ByKeySizeableLoader<K, V> getByKeySizeableLoader();
+    void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader);
     
     V getFromCache(K key);
     Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed();
     
-    public interface ValueByKeyGenerator<K, V> {
-        V next(K key);
+    public static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
+        return new LRUCacheImpl<>(capacityBytes, loader);
     }
     
-    public static <K, V> LRUCache<K, V> defaultImpl(ValueByKeyGenerator<K, V> gen, int maxSize) {
-        return new LRUCacheImpl<>(gen, maxSize);
-    }
-    
-    public static class LRUCacheImpl<K, V> extends LinkedHashMap<K, V> implements LRUCache<K, V> {
-    
-        private final ValueByKeyGenerator<K, V> gen;
+    static class LRUCacheImpl<K, V extends Sizeable> extends LinkedHashMap<K, V> implements LRUCache<K, V> {
 
-        private int maxSize;
-
-        private LRUCacheImpl(ValueByKeyGenerator<K, V> gen, int maxSize) {
-            super(maxSize);
-            this.gen = gen;
-            this.maxSize = maxSize;
+        private long sizeBytes;
+        private long capacityBytes;
+        ByKeySizeableLoader<K, V> loader;
+        
+        LRUCacheImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
+            this.capacityBytes = capacityBytes;
+            this.loader = loader;
         }
-
-        @Override public int getMaxSize() {return maxSize;}
-        @Override public void setMaxSize(int maxSize) {this.maxSize = maxSize;}
+        
+        @Override public long getSizeBytes() {return sizeBytes;}
+        @Override public long getMaxCapacityBytes() {return capacityBytes;}
 
         @Override
-        protected boolean removeEldestEntry(Entry<K, V> eldest) {
-            return size() == maxSize + 1;
+        public void setMaxCapacity(long capacityBytes) {
+            if (capacityBytes <= 0)
+                throw new IllegalArgumentException("Capacity must be greater than 0.");
+            this.capacityBytes = capacityBytes;
+            Iterator<Entry<K, V>> it = this.entrySet().iterator();
+            while (sizeBytes > capacityBytes) {
+                V v = it.next().getValue();
+                sizeBytes -= v.getSizeBytes();
+                it.remove();
+            }
         }
+        
+        @Override public ByKeySizeableLoader<K, V> getByKeySizeableLoader() {return loader;}
+        @Override public void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader) {this.loader = loader;}
 
         @Override
         public V getFromCache(K key) {
-            V v = get(key);
-            if (v == null) {
-                v = gen.next(key);
-                put(key, v);
-            } else {
+            V val = get(key);
+            if (val != null) {
                 remove(key);
-                put(key, v);
-            }
-            return v;
+                put(key, val);
+            } else {
+                long size = loader.estimateSizeBytes(key);
+                if (capacityBytes < size)
+                    throw new RuntimeException("Insufficient cache space.");
+                Iterator<Entry<K, V>> it = this.entrySet().iterator();
+                while (sizeBytes + size > capacityBytes) {
+                    V v = it.next().getValue();
+                    sizeBytes -= v.getSizeBytes();
+                    it.remove();
+                }
+                val = loader.load(key);
+                sizeBytes += val.getSizeBytes();
+                put(key, val);
+            }                
+            return val;
         }
-
+        
         @Override
-        public Iterable<Entry<K, V>> fromLeastToMostRecentlyUsed() {
-            return this.entrySet();
+        public Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed() {
+            return Collections.unmodifiableSet(entrySet());
         }
         
     }
