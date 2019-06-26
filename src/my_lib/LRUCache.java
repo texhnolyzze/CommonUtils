@@ -15,10 +15,7 @@ import java.util.Map.Entry;
 public interface LRUCache<K, V extends LRUCache.Sizeable> {
     
     public interface Sizeable {long getSizeBytes();}
-    public interface ByKeySizeableLoader<K, V extends Sizeable> {
-        V load(K key); 
-        long estimateSizeBytes(K key);
-    }
+    public interface ByKeySizeableLoader<K, V extends Sizeable> {V load(K key);}
     
     long getSizeBytes();
     long getMaxCapacityBytes();
@@ -34,11 +31,12 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
         return new LRUCacheImpl<>(capacityBytes, loader);
     }
     
-    static class LRUCacheImpl<K, V extends Sizeable> extends LinkedHashMap<K, V> implements LRUCache<K, V> {
+    static class LRUCacheImpl<K, V extends Sizeable> implements LRUCache<K, V> {
 
         private long sizeBytes;
         private long capacityBytes;
         private ByKeySizeableLoader<K, V> loader;
+        private final LinkedHashMap<K, V> map = new LinkedHashMap<>();
         
         LRUCacheImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
             this.capacityBytes = capacityBytes;
@@ -53,7 +51,7 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
             if (capacityBytes <= 0)
                 throw new IllegalArgumentException("Capacity must be greater than 0.");
             this.capacityBytes = capacityBytes;
-            Iterator<Entry<K, V>> it = this.entrySet().iterator();
+            Iterator<Entry<K, V>> it = map.entrySet().iterator();
             while (sizeBytes > capacityBytes) {
                 V v = it.next().getValue();
                 sizeBytes -= v.getSizeBytes();
@@ -66,30 +64,32 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
 
         @Override
         public V getFromCacheOrLoad(K key) {
-            V val = get(key);
+            V val = map.get(key);
             if (val != null) {
-                remove(key);
-                put(key, val);
+                map.remove(key);
+                map.put(key, val);
             } else {
-                long size = loader.estimateSizeBytes(key);
+                val = loader.load(key);
+                if (val == null)
+                    return null;
+                long size = val.getSizeBytes();
                 if (capacityBytes < size)
                     throw new RuntimeException("Insufficient cache space.");
-                Iterator<Entry<K, V>> it = this.entrySet().iterator();
+                Iterator<Entry<K, V>> it = map.entrySet().iterator();
                 while (sizeBytes + size > capacityBytes) {
                     V v = it.next().getValue();
                     sizeBytes -= v.getSizeBytes();
                     it.remove();
                 }
-                val = loader.load(key);
                 sizeBytes += val.getSizeBytes();
-                put(key, val);
+                map.put(key, val);
             }                
             return val;
         }
         
         @Override
         public Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed() {
-            return Collections.unmodifiableSet(entrySet());
+            return Collections.unmodifiableSet(map.entrySet());
         }
         
     }

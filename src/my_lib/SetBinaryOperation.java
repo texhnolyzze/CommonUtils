@@ -280,7 +280,7 @@ public enum SetBinaryOperation {
         return sb.toString();
     }
     
-    public <E> Set<E> constructNewSet(Set<E> a, Set<E> b) {
+    public <E> Set<E> constructNewSet(Set<? extends E> a, Set<? extends E> b) {
         Set<E> res = new HashSet<>();
         Iterator<E> it = iterator(a, b);
         while (it.hasNext()) 
@@ -288,8 +288,8 @@ public enum SetBinaryOperation {
         return res;
     }
     
-    public <E> Result<E> delegate(Set<E> a, Set<E> b) {
-        return new Result<>(a, b, this);
+    public <E> Result<E> delegate(Set<? extends E> a, Set<? extends E> b) {
+        return new Result(a, b, this);
     }
         
     public static class Result<E> implements Set<E> {
