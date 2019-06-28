@@ -21,26 +21,22 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
     long getMaxCapacityBytes();
     void setMaxCapacity(long capacityBytes);
     
-    ByKeySizeableLoader<K, V> getByKeySizeableLoader();
-    void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader);
-    
-    V getFromCacheOrLoad(K key);
+    V getIfPresent(K key);
+    V getIfPresentOrLoad(K key, ByKeySizeableLoader<K, ? extends V> loader);
     Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed();
     
-    public static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
-        return new LRUCacheImpl<>(capacityBytes, loader);
+    public static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes) {
+        return new LRUCacheImpl<>(capacityBytes);
     }
     
     static class LRUCacheImpl<K, V extends Sizeable> implements LRUCache<K, V> {
 
         private long sizeBytes;
         private long capacityBytes;
-        private ByKeySizeableLoader<K, V> loader;
         private final LinkedHashMap<K, V> map = new LinkedHashMap<>();
         
-        LRUCacheImpl(long capacityBytes, ByKeySizeableLoader<K, V> loader) {
+        LRUCacheImpl(long capacityBytes) {
             this.capacityBytes = capacityBytes;
-            this.loader = loader;
         }
         
         @Override public long getSizeBytes() {return sizeBytes;}
@@ -58,12 +54,14 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
                 it.remove();
             }
         }
-        
-        @Override public ByKeySizeableLoader<K, V> getByKeySizeableLoader() {return loader;}
-        @Override public void setByKeySizeableLoader(ByKeySizeableLoader<K, V> loader) {this.loader = loader;}
 
         @Override
-        public V getFromCacheOrLoad(K key) {
+        public V getIfPresent(K key) {
+            return map.get(key);
+        }
+        
+        @Override
+        public V getIfPresentOrLoad(K key, ByKeySizeableLoader<K, ? extends V> loader) {
             V val = map.get(key);
             if (val != null) {
                 map.remove(key);
