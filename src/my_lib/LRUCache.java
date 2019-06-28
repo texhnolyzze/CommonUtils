@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 public interface LRUCache<K, V extends LRUCache.Sizeable> {
     
     public interface Sizeable {long getSizeBytes();}
-    public interface ByKeySizeableLoader<K, V extends Sizeable> {V load(K key);}
+    @FunctionalInterface public interface ByKeySizeableLoader<K, V extends Sizeable> {V load(K key);}
     
     long getSizeBytes();
     long getMaxCapacityBytes();
