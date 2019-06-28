@@ -57,7 +57,12 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
 
         @Override
         public V getIfPresent(K key) {
-            return map.get(key);
+            V val = map.get(key);
+            if (val != null) {
+                map.remove(key);
+                map.put(key, val);
+            }
+            return val;
         }
         
         @Override
