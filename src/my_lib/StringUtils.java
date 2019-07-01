@@ -1,6 +1,5 @@
 package my_lib;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -399,11 +398,11 @@ public final class StringUtils {
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
             switch (c) {
-                case '¨':
-                    sb.append('Å');
+                case 'Ñ‘':
+                    sb.append('Ðµ');
                     break;
-                case '¸':
-                    sb.append('å');
+                case 'Ð':
+                    sb.append('Ð•');
                     break;
                 default:
                     sb.append(c);
