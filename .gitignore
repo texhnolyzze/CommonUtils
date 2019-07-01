@@ -1,5 +1,6 @@
-/build/
+build/
 build.xml
 manifest.mf
-/dist/
-/test/sandbox/
+dist/
+test/sandbox/
+nbproject/
