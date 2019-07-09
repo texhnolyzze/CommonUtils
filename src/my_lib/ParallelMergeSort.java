@@ -52,9 +52,8 @@ public class ParallelMergeSort<T> extends RecursiveTask<T[]> {
             ParallelMergeSort<T> l = new ParallelMergeSort<>(arr, left, mid, threshold, cmp, clazz);
             ParallelMergeSort<T> r = new ParallelMergeSort<>(arr, mid + 1, right, threshold, cmp, clazz);
             l.fork();
-            r.fork();
+            T[] rightArr = r.compute();
             T[] leftArr = l.join();
-            T[] rightArr = r.join();
             return merge(arr, leftArr, rightArr, left, mid, right, cmp, clazz);
         }
     }
