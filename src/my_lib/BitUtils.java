@@ -41,11 +41,11 @@ public class BitUtils {
     }
     
     public static long toggle(int idx, long n) {
-        return n ^ ~(1L << idx);
+        return n ^ (1L << idx);
     }
     
     public static int toggle(int idx, int n) {
-        return n ^ ~(1 << idx);
+        return n ^ (1 << idx);
     }
     
 //  returns bits of a number n in the range (fromIdx, toIdx) 
