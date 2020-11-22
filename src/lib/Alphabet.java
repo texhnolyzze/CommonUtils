@@ -101,7 +101,7 @@ public class Alphabet implements Iterable<Character> {
     public static Alphabet fromUTF16Range(int from, int to) {
         if (from < 0 || to < from || to > 65535) 
             throw new IllegalArgumentException("[from, to] not in the UTF-16 range; from: " + from + "; to: " + to);
-        Pair<Integer, Integer> key = new Pair<>(from, to);
+        Pair<Integer, Integer> key = Pair.of(from, to);
         Alphabet cached = ALL_UTF16.get(key);
         if (cached != null)
             return cached;

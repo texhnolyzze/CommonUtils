@@ -186,7 +186,7 @@ public final class StringUtils {
                     Node curr = state.isLeaf ? state : state.nextLeafNode;
                     while (curr != null) {
                         String match = patterns[curr.matchingPatternIndex];
-                        callback.accept(match, new Pair<>(i - match.length() + 1, i));
+                        callback.accept(match, Pair.of(i - match.length() + 1, i));
                         curr = curr.nextLeafNode;
                     }
                 }

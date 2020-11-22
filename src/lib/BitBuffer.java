@@ -112,7 +112,7 @@ public class BitBuffer  {
         System.arraycopy(buffer, 0, raw, 0, intIdx);
         if (bitIdx % R != 0) 
             raw[intIdx] = buffer[intIdx];
-        return new Pair<>(raw, bitIdx % R);
+        return Pair.of(raw, bitIdx % R);
     }
     
     private void resize(int cap) {

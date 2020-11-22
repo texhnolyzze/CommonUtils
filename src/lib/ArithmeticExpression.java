@@ -308,10 +308,10 @@ public final class ArithmeticExpression {
             default:
                 throw new RuntimeException();
         }
-        return new Pair<>(node, subtreeEndIndex);
+        return Pair.of(node, subtreeEndIndex);
     }
     
-    private static interface Node {}
+    private interface Node {}
     
     private static class OperandNode implements Node {
         double val;

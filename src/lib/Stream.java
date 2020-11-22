@@ -15,32 +15,16 @@ public class Stream<T> {
     private static final Stream<?> EMPTY_STREAM = cons(null, self -> () -> self);
 
     private final T car;
-    private int index;
     private final Promise<Stream<T>> cdr;
 
-    private Stream(T car, Promise<Stream<T>> cdr, int index) {
-        if (index < 0)
-            throw new IllegalArgumentException("index <0");
+    private Stream(T car, Promise<Stream<T>> cdr) {
         this.car = car;
-        this.index = index;
         this.cdr = cdr;
     }
 
-    private Stream(T car, Function<Stream<T>, UncheckedCallable<Stream<T>>> cdr, int index) {
-        if (index < 0)
-            throw new IllegalArgumentException("index <0");
+    private Stream(T car, Function<Stream<T>, UncheckedCallable<Stream<T>>> cdr) {
         this.car = car;
-        this.index = index;
         this.cdr = promise(cdr.apply(this));
-    }
-
-    public int index() {
-        return index;
-    }
-
-    private Stream<T> index(int index) {
-        this.index = index;
-        return this;
     }
 
     public Optional<T> findAny() {
@@ -61,10 +45,6 @@ public class Stream<T> {
         return cdr.get();
     }
 
-    private Stream<T> cdr(int index) {
-        return cdr().index(index);
-    }
-
     public T ref(long n) {
         Stream<T> res = this;
         while (!res.isEmpty()) {
@@ -80,7 +60,7 @@ public class Stream<T> {
         if (isEmpty() || other.isEmpty())
             return empty();
         T res = combiner.apply(car(), other.car());
-        return cons(res, () -> cdr(index + 1).combine(other.cdr(), combiner), index);
+        return cons(res, () -> cdr().combine(other.cdr(), combiner));
     }
 
     public Stream<T> filter(Predicate<? super T> predicate) {
@@ -88,11 +68,39 @@ public class Stream<T> {
         while (!s.isEmpty()) {
             if (predicate.test(s.car())) {
                 Stream<T> res = s;
-                return cons(res.car(), () -> res.cdr(index + 1).filter(predicate), index);
+                return cons(res.car(), () -> res.cdr().filter(predicate));
             }
             s = s.cdr();
         }
         return empty();
+    }
+
+    public <X> Stream<X> flatMap(Function<? super T, Stream<? extends X>> mapper) {
+        Stream<T> target = this;
+        while (!target.isEmpty()) {
+            Stream<? extends X> flat = mapper.apply(target.car());
+            if (!flat.isEmpty()) {
+                final Stream<T> ftarget = target;
+                return drain(flat, () -> ftarget.cdr().flatMap(mapper));
+            }
+            target = target.cdr();
+        }
+        return empty();
+    }
+
+    private static <X> Stream<X> drain(Stream<? extends X> s, UncheckedCallable<Stream<X>> next) {
+        if (s.isEmpty())
+            return next.call();
+        return cons(s.car(), () -> drain(s.cdr(), next));
+    }
+
+    public Stream<T> skip(long n) {
+        Stream<T> res = this;
+        while (!res.isEmpty() && n != 0) {
+            res = res.cdr();
+            n--;
+        }
+        return res;
     }
 
     public void forEach(Consumer<? super T> consumer) {
@@ -106,19 +114,13 @@ public class Stream<T> {
     public <V> Stream<V> map(Function<? super T, ? extends V> mapper) {
         if (isEmpty())
             return empty();
-        return cons(mapper.apply(car()), () -> cdr(index + 1).map(mapper), index);
-    }
-
-    public <V> Stream<V> mapIndexed(BiFunction<? super T, Integer, ? extends V> mapper) {
-        if (isEmpty())
-            return empty();
-        return cons(mapper.apply(car(), index), () -> cdr(index + 1).mapIndexed(mapper), index);
+        return cons(mapper.apply(car()), () -> cdr().map(mapper));
     }
 
     public Stream<T> limit(long n) {
         if (n <= 0)
             return empty();
-        return cons(car(), () -> cdr(index + 1).limit(n - 1), index);
+        return cons(car(), () -> cdr().limit(n - 1));
     }
 
     public boolean allMatch(Predicate<? super T> predicate) {
@@ -177,20 +179,22 @@ public class Stream<T> {
         forEach(System.out::println);
     }
 
+    public Stream<Pair<Integer, T>> indexed() {
+        return indexed(this, 0);
+    }
+
+    public Stream<Pair<Integer, T>> indexed(Stream<T> src, int from) {
+        if (src.isEmpty())
+            return empty();
+        return cons(Pair.of(from, src.car()), () -> indexed(src.cdr(), from + 1));
+    }
+
     static <X> Stream<X> cons(X car, UncheckedCallable<Stream<X>> cdr) {
-        return new Stream<>(car, promise(cdr), 0);
+        return new Stream<>(car, promise(cdr));
     }
 
     static <X> Stream<X> cons(X car, Function<Stream<X>, UncheckedCallable<Stream<X>>> cdr) {
-        return new Stream<>(car, cdr, 0);
-    }
-
-    static <X> Stream<X> cons(X car, UncheckedCallable<Stream<X>> cdr, int index) {
-        return new Stream<>(car, promise(cdr), index);
-    }
-
-    static <X> Stream<X> cons(X car, Function<Stream<X>, UncheckedCallable<Stream<X>>> cdr, int index) {
-        return new Stream<>(car, cdr, index);
+        return new Stream<>(car, cdr);
     }
 
     @SuppressWarnings("unchecked")

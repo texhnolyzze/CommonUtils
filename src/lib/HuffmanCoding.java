@@ -170,7 +170,7 @@ public final class HuffmanCoding {
                 charCode = (charCode << 1) | bb.bitAt(index + 16);
                 Node n = new Node();
                 n.c = (char) charCode;
-                return new Pair<>(n, index + 16);
+                return Pair.of(n, index + 16);
             } else {
                 Node parent = new Node();
                 parent.childs = new Node[2];
@@ -178,7 +178,7 @@ public final class HuffmanCoding {
                 parent.childs[0] = left.x();
                 Pair<Node, Integer> right = readNode(bb, left.y() + 1);
                 parent.childs[1] = right.x();
-                return new Pair<>(parent, right.y());
+                return Pair.of(parent, right.y());
             }
         }
         
