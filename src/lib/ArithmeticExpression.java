@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,13 +17,13 @@ public final class ArithmeticExpression {
     
 //  add some common functions
     static {
-        Function.newFunction("sqrt", (vals) -> {return Math.sqrt(vals[0]);}, 1);
-        Function.newFunction("sin", (vals) -> {return Math.sin(vals[0]);}, 1);
-        Function.newFunction("cos", (vals) -> {return Math.cos(vals[0]);}, 1);   
-        Function.newFunction("tan", (vals) -> {return Math.tan(vals[0]);}, 1);
-        Function.newFunction("ln", (vals) -> {return Math.log(vals[0]);}, 1);
-        Function.newFunction("lg", (vals) -> {return Math.log10(vals[0]);}, 1);
-        Function.newFunction("log", (vals) -> {return MathUtils.log(vals[0], vals[1]);}, 2);
+        Function.newFunction("sqrt", vals -> Math.sqrt(vals[0]), 1);
+        Function.newFunction("sin", vals -> Math.sin(vals[0]), 1);
+        Function.newFunction("cos", vals -> Math.cos(vals[0]), 1);
+        Function.newFunction("tan", vals -> Math.tan(vals[0]), 1);
+        Function.newFunction("ln", vals -> Math.log(vals[0]), 1);
+        Function.newFunction("lg", vals -> Math.log10(vals[0]), 1);
+        Function.newFunction("log", vals -> MathUtils.log(vals[0], vals[1]), 2);
     }
     
     private Node root;

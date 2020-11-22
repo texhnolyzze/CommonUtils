@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

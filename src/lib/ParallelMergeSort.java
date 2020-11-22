@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.lang.reflect.Array;
 import java.util.Comparator;

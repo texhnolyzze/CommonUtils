@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.PrimitiveIterator;
 import java.util.Random;
@@ -12,12 +12,12 @@ import java.util.stream.Stream;
 public class DoubleStreamWindowFilter {
     
     @FunctionalInterface
-    private static interface BiDoublePredicate {
+    private interface BiDoublePredicate {
         boolean test(double d1, double d2);
     }
 
     @FunctionalInterface    
-    public static interface IntDoubleConsumer {
+    public interface IntDoubleConsumer {
         void accept(int i, double d);
     }
     
@@ -27,7 +27,7 @@ public class DoubleStreamWindowFilter {
         public IntDoublePair(int i, double d) {this.i = i; this.d = d;}
     }
     
-    public static enum FilterType {
+    public enum FilterType {
         MIN_FILTER, MAX_FILTER, AVG_FILTER, MEDIAN_FILTER
     }
     
@@ -42,59 +42,59 @@ public class DoubleStreamWindowFilter {
             throw new IllegalArgumentException("Window size must be >= 2");
         int i = 0;
         PrimitiveIterator.OfDouble it = ds.iterator();
-        FixedSizeDoubleDeque d_deque;
-        FixedSizeIntegerDeque i_deque;
+        FixedSizeDoubleDeque dDeque;
+        FixedSizeIntegerDeque iDeque;
         switch (filterType) {
             case MIN_FILTER:
             case MAX_FILTER:
-                d_deque = new FixedSizeDoubleDeque(windowSize);
-                i_deque = new FixedSizeIntegerDeque(windowSize);
+                dDeque = new FixedSizeDoubleDeque(windowSize);
+                iDeque = new FixedSizeIntegerDeque(windowSize);
                 BiDoublePredicate predicate = filterType == FilterType.MIN_FILTER ? (d1, d2) -> d1 > d2 : (d1, d2) -> d1 < d2;
                 while (it.hasNext() && i < windowSize) {
                     double next = it.nextDouble();
-                    while (!d_deque.isEmpty() && predicate.test(d_deque.peekTail(), next)) {
-                        d_deque.pollTail();
-                        i_deque.pollTail();
+                    while (dDeque.notEmpty() && predicate.test(dDeque.peekTail(), next)) {
+                        dDeque.pollTail();
+                        iDeque.pollTail();
                     }
-                    d_deque.appendTail(next);
-                    i_deque.appendTail(i);
+                    dDeque.appendTail(next);
+                    iDeque.appendTail(i);
                     i++;
                 }
                 if (i == windowSize) {
-                    consumer.accept(0, d_deque.peekHead());
+                    consumer.accept(0, dDeque.peekHead());
                     while (it.hasNext()) {
                         double next = it.nextDouble();
-                        if (i_deque.peekHead() == i - windowSize) {
-                            d_deque.pollHead();
-                            i_deque.pollHead();
+                        if (iDeque.peekHead() == i - windowSize) {
+                            dDeque.pollHead();
+                            iDeque.pollHead();
                         }
-                        while (!d_deque.isEmpty() && predicate.test(d_deque.peekTail(), next)) {
-                            d_deque.pollTail();
-                            i_deque.pollTail();
+                        while (dDeque.notEmpty() && predicate.test(dDeque.peekTail(), next)) {
+                            dDeque.pollTail();
+                            iDeque.pollTail();
                         }
-                        d_deque.appendTail(next);
-                        i_deque.appendTail(i);
-                        consumer.accept(i - windowSize + 1, d_deque.peekHead());
+                        dDeque.appendTail(next);
+                        iDeque.appendTail(i);
+                        consumer.accept(i - windowSize + 1, dDeque.peekHead());
                         i++;
                     }
                 }
                 break;
             case AVG_FILTER:                
-                d_deque = new FixedSizeDoubleDeque(windowSize);
+                dDeque = new FixedSizeDoubleDeque(windowSize);
                 double avg = 0.0;
-                double ws_inv = 1.0D / windowSize;
+                double wsInv = 1.0D / windowSize;
                 while (it.hasNext() && i < windowSize) {
-                    double next = it.nextDouble() * ws_inv;
+                    double next = it.nextDouble() * wsInv;
                     avg += next;
-                    d_deque.appendTail(next);
+                    dDeque.appendTail(next);
                     i++;
                 }
                 if (i == windowSize) {
                     consumer.accept(0, avg);
                     while (it.hasNext()) {
-                        double next = it.nextDouble() * ws_inv;
-                        avg = avg - d_deque.pollHead() + next;
-                        d_deque.appendTail(next);
+                        double next = it.nextDouble() * wsInv;
+                        avg = avg - dDeque.pollHead() + next;
+                        dDeque.appendTail(next);
                         consumer.accept(i - windowSize + 1, avg);
                         i++;
                     }
@@ -120,10 +120,11 @@ public class DoubleStreamWindowFilter {
     private static class FixedSizeDoubleDeque {
         int size;
         double[] arr;
-        int head, tail;
+        int head;
+        int tail;
         FixedSizeDoubleDeque(int maxSize) {arr = new double[maxSize];}
         int size() {return size;}
-        boolean isEmpty() {return size == 0;}
+        boolean notEmpty() {return size != 0;}
         double peekHead() {return arr[head];}
         double peekTail() {return arr[tail == 0 ? arr.length - 1 : tail - 1];}
         
@@ -151,7 +152,8 @@ public class DoubleStreamWindowFilter {
     private static class FixedSizeIntegerDeque {
         int size;
         int[] arr;
-        int head, tail;
+        int head;
+        int tail;
         FixedSizeIntegerDeque(int maxSize) {arr = new int[maxSize];}
         int size() {return size;}
         boolean isEmpty() {return size == 0;}
@@ -164,17 +166,14 @@ public class DoubleStreamWindowFilter {
             tail = (tail + 1) % arr.length;
         }
         
-        int pollHead() {
+        void pollHead() {
             size--;
-            int i = arr[head];
             head = (head + 1) % arr.length;
-            return i;
         }
         
-        int pollTail() {
+        void pollTail() {
             size--;
             tail = tail == 0 ? arr.length - 1 : tail - 1;
-            return arr[tail];
         }
         
     }
@@ -187,12 +186,12 @@ public class DoubleStreamWindowFilter {
     private static class IndexedOrderedSequenceOfDouble implements IndexedMedianFinder {
         
         final double[] arr;
-        final int[] ptr, ptr_idx;
+        final int[] ptr, ptrIdx;
         
         IndexedOrderedSequenceOfDouble(double[] arr) {
             this.arr = arr;
             this.ptr = new int[arr.length];
-            this.ptr_idx = new int[arr.length];
+            this.ptrIdx = new int[arr.length];
             init();
         }
         
@@ -202,11 +201,11 @@ public class DoubleStreamWindowFilter {
                 double ai = arr[i];
                 while (j > 0 && ai < arr[ptr[j - 1]]) {
                     ptr[j] = ptr[j - 1];
-                    ptr_idx[ptr[j]] = j;
+                    ptrIdx[ptr[j]] = j;
                     j--;
                 }
                 ptr[j] = i;
-                ptr_idx[i] = j;
+                ptrIdx[i] = j;
             }
         }
         
@@ -218,19 +217,19 @@ public class DoubleStreamWindowFilter {
         @Override
         public void setOn(int index, double elem) {
             arr[index] = elem;
-            int i = ptr_idx[index];
+            int i = ptrIdx[index];
             if (i > 0) {
                 if (i < arr.length - 1) {
                     if (elem < arr[ptr[i - 1]]) {
                         do {
                             ptr[i] = ptr[i - 1];
-                            ptr_idx[ptr[i]] = i;
+                            ptrIdx[ptr[i]] = i;
                             i--;
                         } while (i > 0 && elem < arr[ptr[i - 1]]);
                     } else {
                         while (elem > arr[ptr[i + 1]]) {
                             ptr[i] = ptr[i + 1];
-                            ptr_idx[ptr[i]] = i;
+                            ptrIdx[ptr[i]] = i;
                             i++;
                             if (i == arr.length - 1)
                                 break;
@@ -239,19 +238,19 @@ public class DoubleStreamWindowFilter {
                 } else {
                     while (i > 0 && elem < arr[ptr[i - 1]]) {
                         ptr[i] = ptr[i - 1];
-                        ptr_idx[ptr[i]] = i;
+                        ptrIdx[ptr[i]] = i;
                         i--;
                     }
                 }
             } else {
                 while (i < arr.length - 1 && elem > arr[ptr[i + 1]]) {
                     ptr[i] = ptr[i + 1];
-                    ptr_idx[ptr[i]] = i;
+                    ptrIdx[ptr[i]] = i;
                     i++;
                 }
             }
             ptr[i] = index;
-            ptr_idx[index] = i;
+            ptrIdx[index] = i;
         }
         
     }
@@ -265,26 +264,29 @@ public class DoubleStreamWindowFilter {
         final double[] keys;
         
         static class Node {
+
             double key;
             int size = 1;
             int count = 1; // number of equal keys in this node (duplicates)
-            Node left_child, right_child;
+            Node leftChild;
+            Node rightChild;
             Node() {}
-            Node(double key) {this.key = key;}
-            void set_size() {
-                size = count + (left_child == null ? 0 : left_child.size) + (right_child == null ? 0 : right_child.size);
+
+            void setSize() {
+                size = count + (leftChild == null ? 0 : leftChild.size) + (rightChild == null ? 0 : rightChild.size);
             }
+
         }
         
         RandomizedBSTOfDouble(double[] arr) {
             this.keys = arr;
-            this.pool = new Pool<>(() -> {return new Node();}, (node) -> {
+            this.pool = new Pool<>(Node::new, node -> {
                 node.size = 1;
-                node.left_child = null;
-                node.right_child = null;
+                node.leftChild = null;
+                node.rightChild = null;
             });
-            for (int i = 0; i < arr.length; i++) 
-                root = put(arr[i], root);
+            for (double v : arr)
+                root = put(v, root);
         }
         
         Node unite(Node l, Node r) {
@@ -295,31 +297,31 @@ public class DoubleStreamWindowFilter {
             int n = l.size;
             int m = r.size;
             if (random.nextInt(n + m) < n) {
-                l.right_child = unite(l.right_child, r);
-                l.set_size();
+                l.rightChild = unite(l.rightChild, r);
+                l.setSize();
                 return l;
             } else {
-                r.left_child = unite(l, r.left_child);
-                r.set_size();
+                r.leftChild = unite(l, r.leftChild);
+                r.setSize();
                 return r;
             }
         }
         
-        Node rotate_left(Node x) {
-            Node y = x.right_child;
-            x.right_child = y.left_child;
-            y.left_child = x;
+        Node rotateLeft(Node x) {
+            Node y = x.rightChild;
+            x.rightChild = y.leftChild;
+            y.leftChild = x;
             y.size = x.size;
-            x.set_size();
+            x.setSize();
             return y;
         }
         
-        Node rotate_right(Node y) {
-            Node x = y.left_child;
-            y.left_child = x.right_child;
-            x.right_child = y;
+        Node rotateRight(Node y) {
+            Node x = y.leftChild;
+            y.leftChild = x.rightChild;
+            x.rightChild = y;
             x.size = y.size;
-            y.set_size();
+            y.setSize();
             return x;
         }
         
@@ -330,18 +332,18 @@ public class DoubleStreamWindowFilter {
                 return x;
             }
             if (random.nextInt(n.size + 2) == 0) 
-                return insert_to_root(key, n);
+                return insertToRoot(key, n);
             if (key < n.key)
-                n.left_child = put(key, n.left_child);
+                n.leftChild = put(key, n.leftChild);
             else if (key > n.key)
-                n.right_child = put(key, n.right_child);
+                n.rightChild = put(key, n.rightChild);
             else 
                 n.count++;
             n.size++;
             return n;
         }
         
-        Node insert_to_root(double key, Node n) {
+        Node insertToRoot(double key, Node n) {
             if (n == null) {
                 Node x = pool.obtain();
                 x.key = key;
@@ -349,11 +351,11 @@ public class DoubleStreamWindowFilter {
             }
             n.size++;
             if (key < n.key) {
-                n.left_child = insert_to_root(key, n.left_child);
-                n = rotate_right(n);
+                n.leftChild = insertToRoot(key, n.leftChild);
+                n = rotateRight(n);
             } else if (key > n.key) {
-                n.right_child = insert_to_root(key, n.right_child);
-                n = rotate_left(n);
+                n.rightChild = insertToRoot(key, n.rightChild);
+                n = rotateLeft(n);
             } else 
                 n.count++;
             return n;
@@ -361,14 +363,14 @@ public class DoubleStreamWindowFilter {
         
         Node remove(double key, Node n) {
             if (key < n.key)
-                n.left_child = remove(key, n.left_child);
+                n.leftChild = remove(key, n.leftChild);
             else if (key > n.key)
-                n.right_child = remove(key, n.right_child);
+                n.rightChild = remove(key, n.rightChild);
             else {
                 if (n.count > 1) 
                     n.count--;
                 else {
-                    Node union = unite(n.left_child, n.right_child);
+                    Node union = unite(n.leftChild, n.rightChild);
                     pool.free(n);
                     return union;
                 }
@@ -380,23 +382,23 @@ public class DoubleStreamWindowFilter {
         @Override
         public double getMedian() {
             if (keys.length % 2 == 0)
-                return (get_kth_elem(root, keys.length / 2 - 1) + get_kth_elem(root, keys.length / 2)) / 2;
+                return (getKthElem(root, keys.length / 2 - 1) + getKthElem(root, keys.length / 2)) / 2;
             else
-                return get_kth_elem(root, keys.length / 2);
+                return getKthElem(root, keys.length / 2);
         }
         
-        private double get_kth_elem(Node n, int k) {
-            if (n.left_child != null) {
-                int n_index = n.left_child.size;
-                if (n_index <= k && k <= n_index + n.count - 1)
+        private double getKthElem(Node n, int k) {
+            if (n.leftChild != null) {
+                int index = n.leftChild.size;
+                if (index <= k && k <= index + n.count - 1)
                     return n.key;
-                if (k < n.left_child.size) 
-                    return get_kth_elem(n.left_child, k);
-                return get_kth_elem(n.right_child, k - n.left_child.size - n.count);
+                if (k < n.leftChild.size)
+                    return getKthElem(n.leftChild, k);
+                return getKthElem(n.rightChild, k - n.leftChild.size - n.count);
             } else {
                 if (k <= n.count - 1)
                     return n.key;
-                return get_kth_elem(n.right_child, k - n.count);
+                return getKthElem(n.rightChild, k - n.count);
             }
         }
 

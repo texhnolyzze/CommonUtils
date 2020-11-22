@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.Arrays;
 import java.util.HashMap;

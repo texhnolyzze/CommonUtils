@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.acos;
@@ -126,7 +126,7 @@ public final class MathUtils {
             return EARTH_RADIUS_METERS * acos(sin(teta1) * sin(teta2) + cos(teta1) * cos(teta2) * cos(phi1 - phi2));
         }
 
-        public static interface TetraDoubleConsumer {
+        public interface TetraDoubleConsumer {
             void consume(double d1, double d2, double d3, double d4);
         }
 
@@ -147,7 +147,7 @@ public final class MathUtils {
             }
         }
 
-        public static interface BiDoubleConsumer {
+        public interface BiDoubleConsumer {
             void consume(double d1, double d2);
         }
 

@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.Iterator;
 
@@ -11,7 +11,8 @@ public class Stack<E> implements Iterable<E> {
     private Node<E> head;
     private int size;
 
-    public Stack() {}
+    public Stack() {
+    }
 
     public void clear() {
         size = 0;

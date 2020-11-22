@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -10,12 +10,18 @@ import java.util.Map.Entry;
  *
  * @author Texhnolyze
  * @param <K> key 
- * @param <V extends LRUCache.Sizeable> value (heavy object to be cached). Must implement LRUCache.Sizeable
+ * @param <V> value (heavy object) to be cached. Must implement LRUCache.Sizeable
  */
 public interface LRUCache<K, V extends LRUCache.Sizeable> {
     
-    public interface Sizeable {long getSizeBytes();}
-    @FunctionalInterface public interface ByKeySizeableLoader<K, V extends Sizeable> {V load(K key);}
+    interface Sizeable {
+        long getSizeBytes();
+    }
+
+    @FunctionalInterface
+    interface ByKeySizeableLoader<K, V extends Sizeable> {
+        V load(K key);
+    }
     
     long getSizeBytes();
     long getMaxCapacityBytes();
@@ -25,11 +31,11 @@ public interface LRUCache<K, V extends LRUCache.Sizeable> {
     V getIfPresentOrLoad(K key, ByKeySizeableLoader<K, ? extends V> loader);
     Iterable<Map.Entry<K, V>> fromLeastToMostRecentlyUsed();
     
-    public static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes) {
+    static <K, V extends Sizeable> LRUCache<K, V> defaultImpl(long capacityBytes) {
         return new LRUCacheImpl<>(capacityBytes);
     }
     
-    static class LRUCacheImpl<K, V extends Sizeable> implements LRUCache<K, V> {
+    class LRUCacheImpl<K, V extends Sizeable> implements LRUCache<K, V> {
 
         private long sizeBytes;
         private long capacityBytes;

@@ -1,6 +1,7 @@
-package my_lib;
+package lib;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 /**
@@ -59,12 +60,19 @@ public class RandomQueue<E> implements Iterable<E> {
 
     @Override
     public Iterator<E> iterator() {
-        return new Iterator<E>() {
-            
+        return new Iterator<>() {
+
             private int index;
-            
-            @Override public boolean hasNext() {return index < size;}
-            @Override public E next() {
+
+            @Override
+            public boolean hasNext() {
+                return index < size;
+            }
+
+            @Override
+            public E next() {
+                if (!hasNext())
+                    throw new NoSuchElementException();
                 int j = index + rnd.nextInt(size - index);
                 E temp = elems[index];
                 elems[index] = elems[j];

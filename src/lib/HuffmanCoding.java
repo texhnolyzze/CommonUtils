@@ -1,13 +1,11 @@
-package my_lib;
+package lib;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.PriorityQueue;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import my_lib.HuffmanCoding.CodingTree.Node;
+import java.util.*;
+
+import lib.HuffmanCoding.CodingTree.Node;
 
 /**
  *
@@ -109,9 +107,7 @@ public final class HuffmanCoding {
                 int index = alphabet.indexOf(message.charAt(i));
                 nodes[index].freq++;
             }
-            PriorityQueue<Node> pq = new PriorityQueue<>((Node n1, Node n2) -> {
-                return Integer.compare(n1.freq, n2.freq);
-            });
+            PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparingInt((Node n) -> n.freq));
             pq.addAll(Arrays.asList(nodes));
             while (pq.size() > 1) {
                 Node n1 = pq.poll();

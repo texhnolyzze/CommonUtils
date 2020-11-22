@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -143,9 +143,7 @@ public class UFS<E> {
     
     private List<E> getChildsOf(E e) {
         List<E> childs = new ArrayList<>();
-        Iterator<Map.Entry<E, E>> it = parentOf.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<E, E> entry = it.next();
+        for (Map.Entry<E, E> entry : parentOf.entrySet()) {
             E parent = entry.getValue();
             if (parent == e) {
                 E child = entry.getKey();
@@ -159,10 +157,8 @@ public class UFS<E> {
         E temp = parent;
         do {
             sizeOf.put(temp, sizeOf.get(temp) - 1);
-            temp = parentOf.get(temp); 
-            if (temp == parent)
-                break;
-        } while (true);
+            temp = parentOf.get(temp);
+        } while (temp != parent);
     }
     
 }

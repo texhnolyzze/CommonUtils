@@ -1,4 +1,4 @@
-package my_lib;
+package lib;
 
 import java.util.Comparator;
 import java.util.HashMap;
