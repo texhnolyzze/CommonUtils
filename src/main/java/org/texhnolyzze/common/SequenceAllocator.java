@@ -1,8 +1,6 @@
 package org.texhnolyzze.common;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -27,34 +25,30 @@ public class SequenceAllocator {
      */
     private final int increment;
 
-    private final ReentrantLock lock;
-
-    private final AtomicLong prevSeqValue;
-    private volatile long nextSeqValue;
+    private long prevSeqValue;
+    private long nextSeqValue;
 
     public SequenceAllocator(LongSupplier nextVal, String sequenceName, int increment) {
         this.nextVal = Objects.requireNonNull(nextVal);
         this.sequenceName = sequenceName;
-        this.lock = new ReentrantLock();
         this.increment = increment;
-        this.prevSeqValue = new AtomicLong(0L);
+        this.prevSeqValue = 0L;
         this.nextSeqValue = 0L;
     }
 
     public long obtain() {
-        if (prevSeqValue.get() == nextSeqValue) {
-            lock.lock();
-            try {
-                if (prevSeqValue.get() == nextSeqValue) {
-                    long next = nextVal.getAsLong();
-                    prevSeqValue.set(next);
-                    nextSeqValue = next + increment;
-                }
-            } finally {
-                lock.unlock();
+        long res;
+        synchronized (this) {
+            if (prevSeqValue == nextSeqValue) {
+                long next = nextVal.getAsLong();
+                prevSeqValue = next + 1;
+                nextSeqValue = next + increment;
+                res = next;
+            } else {
+                res = prevSeqValue++;
             }
         }
-        return prevSeqValue.getAndIncrement();
+        return res;
     }
 
     @Override
@@ -62,7 +56,6 @@ public class SequenceAllocator {
         return toStringHelper(SequenceAllocator.class.getSimpleName())
                 .add("nextVal", nextVal)
                 .add("sequenceName", sequenceName)
-                .add("lock", lock)
                 .add("increment", increment)
                 .add("prevSeqValue", prevSeqValue)
                 .add("nextSeqValue", nextSeqValue)

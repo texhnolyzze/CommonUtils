@@ -20,11 +20,18 @@ class SequenceAllocatorTest {
     void testObtain() throws ExecutionException, InterruptedException {
         int increment = 43;
         AtomicLong sequence = new AtomicLong(0);
-        SequenceAllocator allocator = new SequenceAllocator(() -> sequence.getAndAdd(increment), "test_seq", increment);
+        SequenceAllocator allocator = new SequenceAllocator(() -> {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return sequence.getAndAdd(increment);
+        }, "test_seq", increment);
         ExecutorService pool = Executors.newFixedThreadPool(100);
         Set<Long> all = new HashSet<>();
         List<Future<Long>> futures = new ArrayList<>();
-        for (int i = 0; i < 50000; i++) {
+        for (int i = 0; i < 5000; i++) {
             all.add((long) i);
             Future<Long> next = pool.submit(allocator::obtain);
             futures.add(next);
