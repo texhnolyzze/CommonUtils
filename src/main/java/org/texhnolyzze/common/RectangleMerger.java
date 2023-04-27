@@ -40,10 +40,10 @@ public final class RectangleMerger {
                 } else {
                     if (rectangle.intersects(horMin, horMax, verMin, verMax)) {
                         temp.add(rectangle);
-                        horMin = ComparableUtil.min(horMin, rectangle.horizontal().from());
-                        horMax = ComparableUtil.max(horMax, rectangle.horizontal().to());
-                        verMin = ComparableUtil.min(verMin, rectangle.vertical().from());
-                        verMax = ComparableUtil.max(verMax, rectangle.vertical().to());
+                        horMin = ComparableUtils.min(horMin, rectangle.horizontal().from());
+                        horMax = ComparableUtils.max(horMax, rectangle.horizontal().to());
+                        verMin = ComparableUtils.min(verMin, rectangle.vertical().from());
+                        verMax = ComparableUtils.max(verMax, rectangle.vertical().to());
                     }
                 }
             }

@@ -1,8 +1,8 @@
 package org.texhnolyzze.common;
 
-public final class ComparableUtil {
+public final class ComparableUtils {
 
-    private ComparableUtil() {
+    private ComparableUtils() {
         throw new UnsupportedOperationException();
     }
 

@@ -3,9 +3,7 @@ package org.texhnolyzze.common;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static java.util.Collections.singletonList;
@@ -142,6 +140,89 @@ class SegmentTest {
             temp.clear();
         }
         return result;
+    }
+
+    @Test
+    void testIntersection() {
+        Segment<Integer> first = Segment.of(1, 10);
+        Segment<Integer> second = Segment.of(0, 5);
+        assertThat(first.intersection(second)).isEqualTo(Segment.of(1, 5));
+    }
+
+    @Test
+    void testCovered() {
+        assertThat(
+            Segment.of(1, 4).covered(
+                Arrays.asList(
+                    Segment.of(1, 2),
+                    Segment.of(3, 4)
+                )
+            )
+        ).isFalse();
+        assertThat(
+            Segment.of(1, 4).covered(
+                Arrays.asList(
+                    Segment.of(1, 2),
+                    Segment.of(1, 4)
+                )
+            )
+        ).isTrue();
+        assertThat(
+            Segment.of(1, 4).covered(
+                Collections.singletonList(
+                    Segment.of(0, 5)
+                )
+            )
+        ).isTrue();
+        assertThat(
+            Segment.of(1, 4).covered(
+                Arrays.asList(
+                    Segment.of(-1, 0),
+                    Segment.of(-3, 2),
+                    Segment.of(1, 3),
+                    Segment.of(-5, 4)
+                )
+            )
+        ).isTrue();
+        assertThat(
+            Segment.of(1, 4).covered(
+                Arrays.asList(
+                    Segment.of(-1, 0),
+                    Segment.of(-3, 2),
+                    Segment.of(1, 3),
+                    Segment.of(3, 4)
+                )
+            )
+        ).isTrue();
+        assertThat(
+            Segment.of(1, 4).covered(
+                Arrays.asList(
+                    Segment.of(-1, 1),
+                    Segment.of(0, 2),
+                    Segment.of(3, 3),
+                    Segment.of(4, 4)
+                )
+            )
+        ).isFalse();
+        assertThat(
+            Segment.of(1, 4).covered(Collections.emptyList())
+        ).isFalse();
+        assertThat(
+            Segment.of(0, 6).covered(
+                Arrays.asList(
+                    Segment.of(1, 3),
+                    Segment.of(3, 5)
+                )
+            )
+        ).isFalse();
+        assertThat(
+            Segment.of(0, 5).covered(
+                Arrays.asList(
+                    Segment.of(Integer.MIN_VALUE, 3),
+                    Segment.of(1, Integer.MAX_VALUE)
+                )
+            )
+        ).isTrue();
     }
 
 }

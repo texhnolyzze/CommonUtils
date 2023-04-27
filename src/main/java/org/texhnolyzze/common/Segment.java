@@ -3,10 +3,7 @@ package org.texhnolyzze.common;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiFunction;
 
 import static java.util.Collections.emptyList;
@@ -40,7 +37,7 @@ public class Segment<C extends Comparable<? super C>> {
         C temp = this.from;
         List<Segment<C>> res = new ArrayList<>();
         while (true) {
-            C bound = ComparableUtil.min(adjuster.apply(temp, delta), this.to);
+            C bound = ComparableUtils.min(adjuster.apply(temp, delta), this.to);
             res.add(Segment.of(temp, bound));
             if (this.to.compareTo(bound) == 0)
                 break;
@@ -62,11 +59,26 @@ public class Segment<C extends Comparable<? super C>> {
     }
 
     public boolean intersects(C otherFrom, C otherTo) {
-        return ComparableUtil.max(this.from, otherFrom).compareTo(ComparableUtil.min(this.to, otherTo)) <= 0;
+        return ComparableUtils.max(this.from, otherFrom).compareTo(ComparableUtils.min(this.to, otherTo)) <= 0;
     }
 
     public boolean degenerate() {
         return from.compareTo(to) == 0;
+    }
+
+    /**
+     * Возвращает пересечение этого и переданного сегментов, или null, если его нет
+     */
+    public Segment<C> intersection(
+        final Segment<C> other
+    ) {
+        final C left = ComparableUtils.max(this.from, other.from);
+        final C right = ComparableUtils.min(this.to, other.to);
+        if (left.compareTo(right) <= 0) {
+            return Segment.of(left, right);
+        } else {
+            return null;
+        }
     }
 
     public List<Segment<C>> diff(Segment<C> other) {
@@ -109,7 +121,7 @@ public class Segment<C extends Comparable<? super C>> {
                 return emptyList();
             othersEmpty = false;
             if (next.intersects(temp, bound)) {
-                bound = ComparableUtil.max(bound, next.to);
+                bound = ComparableUtils.max(bound, next.to);
             } else {
                 res.add(Segment.of(bound, next.from));
                 if (!iter.hasNext()) {
@@ -130,6 +142,29 @@ public class Segment<C extends Comparable<? super C>> {
                 return singletonList(this);
         }
         return res;
+    }
+
+    /**
+     * Проверка, что сегмент полностью без разрывов покрыт другими сегментами
+     */
+    public boolean covered(
+        final List<Segment<C>> segments
+    ) {
+        if (segments.isEmpty()) {
+            return false;
+        }
+        segments.sort(Comparator.comparing(Segment::from));
+        C left = segments.get(0).from;
+        C right = segments.get(0).to;
+        for (int i = 1; i < segments.size(); i++) {
+            final Segment<C> otherSegment = segments.get(i);
+            if (!otherSegment.intersects(left, right)) {
+                break;
+            }
+            left = ComparableUtils.min(left, otherSegment.from);
+            right = ComparableUtils.max(right, otherSegment.to);
+        }
+        return left.compareTo(this.from()) <= 0 && right.compareTo(this.to()) >= 0;
     }
 
     @Override
