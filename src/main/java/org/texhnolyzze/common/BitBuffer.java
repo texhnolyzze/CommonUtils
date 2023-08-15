@@ -16,7 +16,9 @@ public class BitBuffer  {
     private int bitIdx;
     private int intIdx;
     
-    public BitBuffer() {this(4);}
+    public BitBuffer() {
+        this(4);
+    }
 
     public BitBuffer(int initCap) {
         buffer = new int[MathUtils.max(1, initCap)];
