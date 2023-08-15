@@ -17,7 +17,10 @@ public class BitBuffer  {
     private int intIdx;
     
     public BitBuffer() {this(4);}
-    public BitBuffer(int initCap) {buffer = new int[MathUtils.max(1, initCap)];}
+
+    public BitBuffer(int initCap) {
+        buffer = new int[MathUtils.max(1, initCap)];
+    }
     
 //  returns the number of significant bits
     public int numBits() {
